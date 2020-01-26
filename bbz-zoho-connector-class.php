@@ -133,7 +133,8 @@ class zoho_connector {
 	
 	public function get_items () {
 		$field_map = array ( // internal_field_name => zoho_field_name
-			'isbn' 		=> 'isbn',			//isbn used as sku
+			//'sku'		=> 'sku',			// sku
+			'isbn' 		=> 'isbn',			// isbn field usually same as sku
 			'zoho_id'	=> 'item_id',		// zoho item id
 			'status'	=> 'status',		// status active or inactive
 			'name'		=> 'name',			// name of product
@@ -143,6 +144,8 @@ class zoho_connector {
 			'stock'		=> 'available_stock',		// current stock level
 			'tax_class'	=> 'tax_name',			// tax class
 			'shipping_class'	=>	'cf_shipping_class_unformatted',	// shipping class code
+			'wholesale_only'	=> 'cf_wholesale_only_unformatted',	// Yes or No or blank
+			'inactive_reason'	=> 'cf_inactive_reason_unformatted',
 			
 		);
 		if (! $this->isconnected() ) return false;
@@ -167,7 +170,7 @@ class zoho_connector {
 			if (!isset ($zoho_data['items'])) break;
 			
 			foreach ($zoho_data['items'] as $zoho_item) {
-				$sku = $zoho_item['isbn'];
+				$sku = $zoho_item['sku'];
 				foreach ($field_map as $int_field_name => $zoho_field_name) {
 					if (isset ($zoho_item[$zoho_field_name])) {
 						$items [$sku][$int_field_name] = $zoho_item[$zoho_field_name];
@@ -179,41 +182,6 @@ class zoho_connector {
 		}
 		return $items;				
 	}
-	/*****
-	* GET MISSING ITEMS
-	*
-	* get list of items not present in woocommerce
-	* returns array isbn => name
-	*****/
-	public function get_missing_items() {
-		$items = $this->get_items();
-		if (is_array($items)) {
-			// get list of product posts
-			$args = array (
-				'post_type' => 'product',	// only get product posts
-				'numberposts' => -1,		// get all of them
-			);
-			$products = get_posts ( $args);
-			$index = array();
-			
-			foreach ( $products as $product ) {
-				$sku = get_post_meta ($product->ID, '_sku', $single=true);	// sku is in meta data
-				if ( !('' == $sku) ) {
-					$index [$sku] = $product->ID;
-				}
-			}
-			
-			foreach ($items as $item) {
-				if (!isset ($index[$item['isbn']]) && $item['status']=='active') {
-					$results [$item['isbn']] = $item['name'];
-				}
-			}
-			return $results;
-		} else {
-			return false;
-		}
-	}
-
 	/*****
 	* get_customers
 	*
@@ -277,12 +245,29 @@ class zoho_connector {
 /*****
 * get_customer_emails
 *
-* returns an an array of valid customer email addresses
+* returns an an array of valid customer email records
+* each record has fields email, customer_id, customer_name
 ****/
 	
 	public function get_customer_emails () {
 		if (! $this->isconnected() ) return false;
 		
+		$response = $this->get_analytics ('BBZ Email Map');
+		if (is_array($response)) {
+			$body = json_decode ($response['body'], true);
+			if ( is_array ($body) && is_array ($body['data'])) {
+				$email_list = array();
+				foreach ($body['data'] as $zoho_contact) {
+					if (! empty ($zoho_contact['email'])  && empty ($email_list[$zoho_contact['email']] ) 
+						&& is_numeric ($zoho_contact['customer_id'] )) {
+						$email_list[] = $zoho_contact;
+					}
+				}
+
+			}
+		}
+
+/* Get from Zoho Books version - only gets principal email		
 		// Zoho returns data in pages of 200 by default
 		$more_pages = true;
 		$next_page = 1;
@@ -310,6 +295,7 @@ class zoho_connector {
 				if (! $email == '') $email_list[$zoho_contact ['contact_id']] = $email;
 			}
 		}
+*/
 		return $email_list;				
 	}
 /*****
@@ -445,9 +431,27 @@ class zoho_connector {
 	public function get_contact_by_email ($email='') {
 		if (empty($email) ) return false;
 		
-		$filter = array ('email'=>$email);
 		if (! $this->isconnected() ) return false;
 		
+		$email_list = $this->get_customer_emails ();
+		
+		if ( !is_array($email_list)) return false;
+		
+		// search for email address
+		$customer_id = '';
+		foreach ($email_list as $record) {
+			if ($record['email'] == $email) {
+				$customer_id = $record['customer_id'];
+				break;  // stop searching when first found
+			}
+		}
+		if (empty ($customer_id) ) { //email not found
+			return false;
+		}
+		// now get full contact record
+		return $this->get_contact_by_id ($customer_id);
+/*		
+		$filter = array ('email'=>$email);
 		$response = $this->get_books ('contacts', $filter);  // get contacts with matching email
 		
 		if (!is_array($response)) return false;
@@ -455,12 +459,8 @@ class zoho_connector {
 		$zoho_data = json_decode($response['body'], true);
 		if (isset ($zoho_data['contacts'])) {
 			$zoho_id = $zoho_data['contacts'][0]['contact_id'];
-			// now get full contact record
 			return $this->get_contact_by_id ($zoho_data['contacts'][0]['contact_id']);
-		} else {
-			return false;
-		}
-
+*/
 	}
 	
 	public function get_contact_by_id ($zoho_id='') {
@@ -474,10 +474,10 @@ class zoho_connector {
 			'first_name'		=> 'first_name',
 			'last_name'		=> 'last_name',
 			'phone'		=> 'phone',
-			'payment_terms_label'	=> 'payment_terms',
+			'payment_terms_label'	=> 'payment_terms_name',
+			'payment_terms'	=> 'payment_terms_days',
 		);
 		$address_map = array ( // zoho_field_name => internal field name
-			"address_id" => 'address_id',
             "attention" => 'attention',
             "address" => 'address1',
             "street2" =>	'address2',

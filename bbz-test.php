@@ -14,11 +14,11 @@ include_once ( dirname( __FILE__ ) . '/bbz-definitions.php');
 include_once ( dirname( __FILE__ ) . '/bbz-zoho-connector-class.php');
 include_once ( dirname( __FILE__ ) . '/bbz-admin-forms.php');
 
-class bbz_test extends bbz_admin_form {
+class bbz_test_form extends bbz_admin_form {
 
 	private $testform = array (
 			'name'		=>	'bbzform-test',
-			'class'		=>	'bbz_test',
+			'class'		=>	'bbz_test_form',
 			'title'		=>	'<h2>Test Connection</h2>',
 			'text_before'	=> '<p>Select the Zoho request to test</p>',
 			'fields'	=>	array (
@@ -30,6 +30,7 @@ class bbz_test extends bbz_admin_form {
 						'get-analytics'	=>	'Get specified Analytics dataset',
 						'get-itemdata'		=>	'Item Data',
 						'get-shipping-classes' => 'Get wc shippng classes',
+						'call-function'		=> 'Call function filterkey(filtervalue)',
 						'get-product-detail'	=> 'Call product function (key=product_id, value=function)',
 						'get-customers'		=> 'Customer Data',
 						'get-emails'		=> 'Get email list',
@@ -38,6 +39,7 @@ class bbz_test extends bbz_admin_form {
 						'get-contact-id'	=> 'Get contact by id',
 						'get-addresses'	=> 'Get addresses for customer id',
 						'get-sales-history'	=> 'Get sales history',
+						'get-user-meta'		=> 'Get user meta (key=user id, val=meta key(optional)',
 						'product-filter'	=> 'Test product filter',
 						'load-auth'		=> 'Load Authorisation',
 					)
@@ -90,10 +92,7 @@ class bbz_test extends bbz_admin_form {
 		$zoho = new zoho_connector;
 		echo '<br>Connection '.( $zoho->connected ? 'successful' : 'failed').'<br>';
 		switch ($options['function']) {
-			case 'check-products':
-				$data = $zoho->get_missing_items();
-				break;
-				
+
 			case 'get-itemdata':
 				$data = $zoho->get_items();
 				break;
@@ -106,6 +105,10 @@ class bbz_test extends bbz_admin_form {
 				$shipping= new WC_shipping();
 				$data = $shipping->get_shipping_classes();
 				break;
+				
+			case 'call-function':
+				$data = call_user_func ($options ['filterkey'],$options['filtervalue']) ;
+				break;			
 			
 			case 'get-product-detail':
 				$product = wc_get_product ($options ['filterkey']);
@@ -140,6 +143,11 @@ class bbz_test extends bbz_admin_form {
 				$args = array();
 				$args ['post__in'][] = $options['filtervalue'];
 				$data = bbz_wwof_product_filter ($args);
+				break;
+				
+			case 'get-user-meta':
+				$user_id = !empty ($options['filterkey']) ? $options['filterkey'] : wp_get_current_user()->ID;
+				$data = get_user_meta ($user_id, $options['filtervalue']);
 				break;
 				
 			case 'get-dataset':

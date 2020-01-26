@@ -71,29 +71,33 @@ function bbz_link_user ($user, $zoho_id='') {  //$user is wp user object
 
 	$address_map = array(  // map zoho address fields to user metadata fields
 		'billing_address'	=> 	array ( // billing address: zoho field => user metadata field
-					'attention'		=>	'billing_last_name',
+					'firstname'		=>	'billing_first_name',
+					'lastname'		=>	'billing_last_name',
 					'company'		=>	'billing_company',
 					'address1'		=> 	'billing_address_1',
 					'address2'		=>	'billing_address_2',
 					'city'			=>	'billing_city',
 					'postcode'		=>	'billing_postcode',
-					'county'		=>	'billing_state',
+					'state'			=>	'billing_state',
 					'country'		=>	'billing_country',
 					'phone'			=>	'billing_phone'
 				),
 		'shipping_address'	=>	array ( // shipping address: zoho field => user metadata field
-					'attention'		=>	'shipping_last_name',
+					'firstname'		=>	'shipping_first_name',
+					'lastname'		=>	'shipping_last_name',
 					'company'		=>	'shipping_company',
 					'address1'		=> 	'shipping_address_1',
 					'address2'		=>	'shipping_address_2',
 					'city'			=>	'shipping_city',
 					'postcode'		=>	'shipping_postcode',
-					'county'		=>	'shipping_state',
+					'state'			=>	'shipping_state',
 					'country'		=>	'shipping_country',
 					'phone'			=>	'shipping_phone'
 				)
 		);
-
+	// reset auto approve
+	update_option( 'wwlc_general_auto_approve_new_leads', 'no' );
+		
 	// first get zohocontact details by email address
 	$zoho = new zoho_connector;
 	if (empty ($zoho_id) ) {
@@ -101,27 +105,57 @@ function bbz_link_user ($user, $zoho_id='') {  //$user is wp user object
 	} else {
 		$zoho_contact = $zoho->get_contact_by_id ( $zoho_id);
 	}
-	$user_id = $user->data->ID;
+	$user_id = $user->ID;
 
 	if (is_array ($zoho_contact) ) {
 	// Match found
-		update_user_meta( $user_id, 'zoho_contact_id', $zoho_contact ['zoho_id'] );
+		if (empty ($zoho_id)) update_user_meta( $user_id, BBZ_UM_ZOHO_ID, $zoho_contact ['zoho_id'] );
 
 		foreach ($address_map as $key => $field_map) {
 			$zoho_address = $zoho_contact [$key];
 			$zoho_address['company'] = $zoho_contact ['company'];
 			foreach ($field_map as $zoho_field => $usermeta_field) {
-				if (! empty ( $zoho_address[$zoho_field])) {
-					update_user_meta( $user_id, $usermeta_field, $zoho_address[$zoho_field] );
+				if ( empty ( $zoho_address[$zoho_field])) {
+					// no data for this field from zoho
+					switch ($zoho_field) {
+						// special handling for first and last name for billing and shipping
+						// zoho just has one field 'attention' so,
+						// if set, we enter first 'Attention:, last zoho attention field
+						// if empty we use the user's first and last name
+						case 'firstname':
+							update_user_meta( $user_id, $usermeta_field, 
+								empty ($zoho_address['attention']) ? $user->first_name : 'Attention:');
+							break;
+						case 'lastname';
+							update_user_meta( $user_id, $usermeta_field, 
+								empty ($zoho_address['attention']) ? $user->last_name :  $zoho_address['attention'] );
+							break;
+						case 'phone':  // if shipping or billing phone blank, use main contact phone number
+							update_user_meta( $user_id, $usermeta_field, $zoho_contact['phone']);
+							break;
+						default:
+							delete_user_meta( $user_id, $usermeta_field );
+					}
 				} else {
-					delete_user_meta( $user_id, $usermeta_field );
+					update_user_meta( $user_id, $usermeta_field, $zoho_address[$zoho_field] );
 				}
 			}
 		}
 		
-		if (! empty ( $zoho_contact ['payment_terms'])) {
-			update_user_meta( $user_id, 'bbz_payment_terms', $zoho_contact ['payment_terms'] );
+		if (! empty ( $zoho_contact ['payment_terms_name'])) {
+			$terms ['name'] = $zoho_contact ['payment_terms_name'];
+			$terms ['days'] = $zoho_contact ['payment_terms_days'];
+			update_user_meta( $user_id, BBZ_UM_PAYMENT_TERMS, $terms );
 		};
+		// if zoho payment terms are < 30 days then don't allow account payment
+		//if (! empty ( $zoho_contact ['payment_terms_days']) && $zoho_contact ['payment_terms_days'] < 30 )  {
+		//	update_user_meta( $user_id, 'wwlc_custom_set_role', 'wholesale_prepay' );
+		//};
+
+		
+		// Now load sales history from zoho
+		bbz_load_sales_history ($user);
+		
 		return true;
 	}
 	return false;

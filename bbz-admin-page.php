@@ -15,6 +15,7 @@ include_once ( dirname( __FILE__ ) . '/bbz-zoho-connector-class.php');
 include_once ( dirname( __FILE__ ) . '/bbz-admin-forms.php');
 include_once ( dirname( __FILE__ ) . '/bbz-sales-history.php');
 include_once ( dirname( __FILE__ ) . '/bbz-test.php');
+include_once ( dirname( __FILE__ ) . '/bbz-actions.php');
 
 /**
  * Creates the submenu page for the plugin.
@@ -112,7 +113,7 @@ class bbz_admin_page {
 				}
 				break;
 			case 'action':
-				$form = new bbz_admin_form ('bbzform-action');
+				$form = new bbz_action_form ();
 				break;
 			case 'link-user':
 				$form = new bbz_admin_form ('bbzform-link-user');
@@ -128,7 +129,7 @@ class bbz_admin_page {
 				echo '</pre>';
 				
 				// Testing form
-				$form = new bbz_test() ;
+				$form = new bbz_test_form() ;
 				break;
 		}
 		$form->render ($options);

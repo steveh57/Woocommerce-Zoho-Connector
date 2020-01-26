@@ -20,6 +20,7 @@ define ('ZOHO_AUTH_SCOPE', 'ZohoBooks.fullaccess.all,ZohoReports.data.read');
 define ('BBZ_PM_ZOHO_ID', 'zoho_item_id');
 define ('BBZ_PM_WHOLESALE_PRICE', 'wholesale_customer_wholesale_price');
 define ('BBZ_PM_HAVE_WHOLESALE_PRICE', 'wholesale_customer_have_wholesale_price');
+define ('BBZ_PM_INACTIVE_REASON', 'bbz_inactive_reason');
 
 
 // User meta tags

@@ -10,10 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 include_once ( dirname( __FILE__ ) . '/bbz-definitions.php');
-//include_once ( dirname( __FILE__ ) . '/bbz-zoho-connector-class.php');
+include_once ( dirname( __FILE__ ) . '/bbz-zoho-connector-class.php');
 include_once ( dirname( __FILE__ ) . '/bbz-sales-history.php');
-include_once ( dirname( __FILE__ ) . '/bbz-update-products.php');
-
 
 
 /**
@@ -93,33 +91,6 @@ class bbz_admin_form {
 				'name'			=> 'submit',
 				'type'			=> 'primary',
 				'title'			=> 'Reset Credentials',
-			)
-		),
-		'bbzform-action'			=> array (
-			'name'		=>	'bbzform-action',
-			'action'	=>	'form_action_actions',
-			'title'		=>	'<h2>Update from Zoho</h2>',
-			'text_before'	=> '<p>Choose an option and click the Execute button to import data and carry out the updates</p>',
-			'fields'	=>	array (
-				'function'	=> array (
-					'type'		=> 'select',
-					'title'		=> 'Action',
-					'options'	=> array (
-						'update-products'	=>	'Update Products',
-						'load-sales-history'	=>	'Load sales history',
-						'check-products'	=>	'Check for missing products',
-					)
-				),
-				'state'			=> array(    // Status hidden
-					'type'          => 'hidden',
-					'title'         => 'State',
-					'value'			=>	'bbzaction'
-				)
-			),
-			'button'		=> array (
-				'name'			=> 'submit',
-				'type'			=> 'primary',
-				'title'			=> 'Execute'
 			)
 		),
 		'bbzform-link-user'	=> array (
@@ -508,36 +479,6 @@ class bbz_admin_form {
 	
 	private function short_desc_action ($options) {
 		
-	}
-	
-	private function form_action_actions ($options) {
-		switch ($options['function']) {
-		case 'update-products':
-			$result= bbz_update_products();
-			if (! $result) {
-				$this->set_admin_notice ($options, 'Product update failed', 'error');
-			} else {
-				$this->set_admin_notice ($options, $result.' Products Updated', 'success');
-			}
-			break;
-		case 'check-products':
-			break;  // this is dealt with in render admin page
-		
-		case 'load-sales-history':
-			$result= bbz_load_sales_history();
-			if (! $result) {
-				$this->set_admin_notice ($options, 'Sales history load failed', 'error');
-			} else {
-				$this->set_admin_notice ($options, $result.' users sales history updated', 'success');
-			}
-			break;
-			
-		case 'reset':
-			unset ($options ['refresh_token']);
-			break;
-		}
-		update_option(OPTION_NAME, $options);
-
 	}
 	
 	private function link_user_action ($options) {
