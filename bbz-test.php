@@ -40,6 +40,7 @@ class bbz_test_form extends bbz_admin_form {
 						'get-addresses'	=> 'Get addresses for customer id',
 						'get-sales-history'	=> 'Get sales history',
 						'get-user-meta'		=> 'Get user meta (key=user id, val=meta key(optional)',
+						'show-options'		=> 'Show bbz option data',
 						'product-filter'	=> 'Test product filter',
 						'load-auth'		=> 'Load Authorisation',
 					)
@@ -75,15 +76,6 @@ class bbz_test_form extends bbz_admin_form {
 	}
 	
 	public function action ($options) {
-// CODE FOR TESTING ONLY - TO BE REMOVED
-				if (isset($options['function']) && $options['function'] == 'load-auth' ) {
-					$options ['client_id'] = '1000.TPISI0TSLJF7YMBBX5K8O2FJI6X1IH';
-					$options ['client_secret'] = '1d98657adf93892a1baccadd32af546e9cae8a9187';
-					$options ['redirect_uri'] = 'https://bitternbooks.co.uk/wp-admin/admin-post.php';
-					$options ['refresh_token'] = '1000.73e32d9535b81dc513a6b87c0407ba61.0c8ba3110643c60a73f1713b6677647b';
-				}
-		update_option(OPTION_NAME, $options);
-// END TEST CODE
 	}
 
 	public function display_data ($options) {
@@ -148,6 +140,10 @@ class bbz_test_form extends bbz_admin_form {
 			case 'get-user-meta':
 				$user_id = !empty ($options['filterkey']) ? $options['filterkey'] : wp_get_current_user()->ID;
 				$data = get_user_meta ($user_id, $options['filtervalue']);
+				break;
+				
+			case 'show-options':
+				$data = $options;
 				break;
 				
 			case 'get-dataset':

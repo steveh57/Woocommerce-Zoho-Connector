@@ -473,8 +473,7 @@ class bbz_admin_form {
 	}
 	
 	private function reset_action ($options) {
-		unset ($options ['refresh_token']);
-		update_option(OPTION_NAME, $options);
+		update_option(OPTION_NAME, array());
 	}
 	
 	private function short_desc_action ($options) {

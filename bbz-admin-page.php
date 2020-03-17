@@ -124,10 +124,7 @@ class bbz_admin_page {
 				$form = new bbz_admin_form ('bbzform-short-desc');
 				break;
 			case 'test':
-				echo '<h2>Saved option data</h2><pre>';
-				print_r ($options);
-				echo '</pre>';
-				
+			
 				// Testing form
 				$form = new bbz_test_form() ;
 				break;

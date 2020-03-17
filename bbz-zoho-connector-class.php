@@ -141,7 +141,7 @@ class zoho_connector {
 			'rrp'		=> 'cf_rrp_unformatted',	// Recommended retail price
 			'orp'		=> 'cf_orp_unformatted',	// original retail price
 			'wsp'		=> 'rate',					// wholesale selling price
-			'stock'		=> 'available_stock',		// current stock level
+			'stock'		=> 'actual_available_stock',		// current stock level
 			'tax_class'	=> 'tax_name',			// tax class
 			'shipping_class'	=>	'cf_shipping_class_unformatted',	// shipping class code
 			'wholesale_only'	=> 'cf_wholesale_only_unformatted',	// Yes or No or blank
@@ -439,8 +439,9 @@ class zoho_connector {
 		
 		// search for email address
 		$customer_id = '';
+		$email = strtolower ($email);  // force lower case for comparison
 		foreach ($email_list as $record) {
-			if ($record['email'] == $email) {
+			if (strtolower($record['email']) == $email) {
 				$customer_id = $record['customer_id'];
 				break;  // stop searching when first found
 			}

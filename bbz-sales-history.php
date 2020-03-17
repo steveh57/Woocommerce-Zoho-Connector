@@ -91,6 +91,9 @@ include_once ( dirname( __FILE__ ) . '/bbz-definitions.php');
 * Filter post processes the product list used in the wholesale order form.
 * If product code '9999' is used in the list it is removed and the users
 * products from the sales history are loaded instead.
+*	9991	Products on sales - uses wc_get_product_ids_on_sale
+*	9992	Featured products - wc_get_featured_product_ids
+*	9999	User's previous purchases
 ****/
 
 
@@ -103,8 +106,8 @@ function bbz_wwof_product_filter ($product_args) {
 			$product_list = $product_args['post__in'];
 			unset ($product_list[$key]); // remove special code
 */
-		if (in_array ('9999', $product_args['post__in'])) {
-			$product_list = $product_args['post__in'];
+		$product_list = $product_args['post__in'];
+		if (in_array ('9999', $product_list) {			
 			
 			// now get sales history from user meta
 			$user_id = get_current_user_id();
@@ -114,8 +117,17 @@ function bbz_wwof_product_filter ($product_args) {
 					$product_list[] = $post_id;
 				}
 			} else $product_list= array ();
-			$product_args['post__in'] = $product_list;
+			
 		}
+		if (in_array ('9991', $product_list) {	
+			$product_list = array_merge ($product_list, wc_get_product_ids_on_sale());
+		}
+		if (in_array ('9992', $product_list) {	
+			$product_list = array_merge ($product_list, wc_get_featured_product_ids());
+		}
+
+		$product_args['post__in'] = $product_list;
+
 	}
 	return $product_args;
 }
