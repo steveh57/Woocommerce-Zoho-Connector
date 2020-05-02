@@ -8,9 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
  
-include_once ( dirname( __FILE__ ) . '/bbz-definitions.php');
-
-class zoho_connector {
+ class zoho_connector {
 
 	public $connected = false;
 
@@ -76,6 +74,12 @@ class zoho_connector {
 		return true;
 	}
 	
+	/****
+	* _get_data
+	*
+	* This is the basic internal get call to the api
+	* returns response without any processing
+	****/
 	private function _get_data($zoho_api_url, $request, $filter = array()) {
 		$options = get_option( OPTION_NAME );
 		$request_url = $zoho_api_url.$request;
@@ -90,18 +94,69 @@ class zoho_connector {
 		
 		return wp_remote_get ($request_url, $request_args);
 	}
+	
 	/****
-	* get_books
+	* _post_data
 	*
-	* call to zoho books api
+	* This is the basic internal post call to the api
+	* returns response without any processing
+	****/
+	private function _post_data($zoho_api_url, $request, $postdata = array()) {
+		$options = get_option( OPTION_NAME );
+		$request_url = $zoho_api_url.$request;
+		$request_args = array(
+			'headers' => array (
+				'Authorization' => 'Zoho-oauthtoken '.$options ['access_token']
+			),
+			'body'	=> 'JSONString='.json_encode ($postdata),
+		);
+		$options ['last_request'] = $request_url;
+		update_option (OPTION_NAME, $options);
+		
+		return wp_remote_post ($request_url, $request_args);
+	}
+	/****
+	* _put_data
+	*
+	* This is the basic internal PUT call to the api
+	* returns response without any processing
+	****/
+	private function _put_data($zoho_api_url, $request, $postdata = array()) {
+		$options = get_option( OPTION_NAME );
+		$request_url = $zoho_api_url.$request;
+		$request_args = array(
+			'method' => 'PUT',
+			'headers' => array (
+				'Authorization' => 'Zoho-oauthtoken '.$options ['access_token']
+			),
+			'body'	=> 'JSONString='.json_encode ($postdata),
+		);
+		$options ['last_request'] = $request_url;
+		update_option (OPTION_NAME, $options);
+		
+		return wp_remote_request ($request_url, $request_args);
+	}
+	/****
+	* get_books, post_books, put_books
+	*
+	* calls to zoho books api
 	* returns response without any processing
 	****/
 	
 	public function get_books ($request, $filter=array()) {
 		if (! $this->isconnected() ) return false;
-		
 		return $this->_get_data (ZOHO_BOOKS_API_URL, $request, $filter);
 	}
+	public function post_books ($request, $postdata=array()) {
+		
+		if (! $this->isconnected() ) return false;
+		return $this->_post_data (ZOHO_BOOKS_API_URL, $request, $postdata);
+	}
+	public function put_books ($request, $postdata=array()) {
+		if (! $this->isconnected() ) return false;
+		return $this->_put_data (ZOHO_BOOKS_API_URL, $request, $postdata);
+	}
+
 	/****
 	* get_analytics
 	*
@@ -298,6 +353,33 @@ class zoho_connector {
 */
 		return $email_list;				
 	}
+	
+/*****
+* get_id_from_email
+*
+* Uses the email list to validate a given email
+* Returns the zoho id or false
+*****/
+	public function get_id_from_email ($email='') {
+		if (empty($email) ) return false;
+		
+		if (! $this->isconnected() ) return false;
+		
+		$email_list = $this->get_customer_emails ();
+		
+		if ( !is_array($email_list)) return false;
+		
+		// search for email address
+		$customer_id = false;
+		$email = strtolower ($email);  // force lower case for comparison
+		foreach ($email_list as $record) {
+			if (strtolower($record['email']) == $email) {
+				return $record['customer_id'];  //found it
+			}
+		}
+		return false;
+	}
+
 /*****
 * get_customer_names
 *
@@ -345,17 +427,6 @@ class zoho_connector {
 ****/	
 
 	public function get_contact_address ($contact_id='') {
-		$address_map = array ( // zoho_field_name => internal field name
-			"address_id" => 'address_id',
-            "attention" => 'attention',
-            "address" => 'address1',
-            "street2" =>	'address2',
-            "city" => 'city',
-            "state" => 'state',
-            "zip" => 'postcode',
-            "country" => 'country',
-            "phone"=> 'phone',
-		);
 
 		if (! $this->isconnected() ) return false;
 		
@@ -368,16 +439,7 @@ class zoho_connector {
 		
 		$zoho_data = json_decode($response['body'], true);
 		if (isset ($zoho_data['addresses'])) {
-			foreach ($zoho_data['addresses'] as $address_id => $zoho_address) {
-				foreach ($field_map as $int_field_name => $zoho_field_name) {
-					if (isset ($zoho_address[$zoho_field_name])) {
-						$result [$address_id][$int_field_name] = $zoho_address[$zoho_field_name];
-					} else {
-						$result [$address_id][$int_field_name] = ''; // default to empty string
-					}
-				}
-			}
-			return $result;
+			return $zoho_data['addresses'];
 		} else {
 			return false;
 		}	
@@ -387,108 +449,22 @@ class zoho_connector {
 * get_contact_by_email
 * get_contact_by_id
 *
-* returns an an array of customer data with matching email
-* Example data returned:
-*		Array
-*		(
-*			[email] => steve@unilake.co.uk
-*			[zoho_id] => 1504573000000078466
-*			[status] => active
-*			[company_name] => Unilake Ltd (Mace Coltishall)
-*			[first_name] => Steve
-*			[last_name] => Haines
-*			[phone] => 01603 731234
-*			[payment_terms] => Net 30
-*			[billing address] => Array
-*						(
-*							[address_id] => 1504573000000078469
-*							[attention] => Billing
-*							[address1] => 99 Boxham Road
-*							[address2] => Catishall
-*							[city] => Norwich
-*							[county] => Norfolk
-*							[postcode] => NRxx 9xx
-*							[country] => 
-*							[phone] => 
-*						)
-*
-*			[shipping_address] => Array
-*						(
-*							[address_id] => 1504573000000078471
-*							[attention] => Shipping
-*							[address1] => 99 Boxham Road
-*							[address2] => Catishall
-*							[city] => Norwich
-*							[county] => Norfolk
-*							[postcode] => NRxx 9xx
-*							[country] => 
-*							[phone] => 
-*						)
-*		)
+* returns an an array of customer data from zoho
+* 
 *
 ****/
 	
 	public function get_contact_by_email ($email='') {
-		if (empty($email) ) return false;
+		//validate and get contoact id
+		$customer_id = $this->get_id_from_email ($email);
 		
-		if (! $this->isconnected() ) return false;
-		
-		$email_list = $this->get_customer_emails ();
-		
-		if ( !is_array($email_list)) return false;
-		
-		// search for email address
-		$customer_id = '';
-		$email = strtolower ($email);  // force lower case for comparison
-		foreach ($email_list as $record) {
-			if (strtolower($record['email']) == $email) {
-				$customer_id = $record['customer_id'];
-				break;  // stop searching when first found
-			}
-		}
-		if (empty ($customer_id) ) { //email not found
-			return false;
-		}
 		// now get full contact record
 		return $this->get_contact_by_id ($customer_id);
-/*		
-		$filter = array ('email'=>$email);
-		$response = $this->get_books ('contacts', $filter);  // get contacts with matching email
-		
-		if (!is_array($response)) return false;
-		
-		$zoho_data = json_decode($response['body'], true);
-		if (isset ($zoho_data['contacts'])) {
-			$zoho_id = $zoho_data['contacts'][0]['contact_id'];
-			return $this->get_contact_by_id ($zoho_data['contacts'][0]['contact_id']);
-*/
 	}
 	
 	public function get_contact_by_id ($zoho_id='') {
 		if (empty($zoho_id)) return false;
 	
-		$contact_map = array ( //  zoho_field_name => internal_field_name
-			'email' 		=> 'email',			// email
-			'contact_id'	=> 'zoho_id',		// zoho item id
-			'status'	=> 'status',		// status active or inactive
-			'company_name'		=> 'company',
-			'first_name'		=> 'first_name',
-			'last_name'		=> 'last_name',
-			'phone'		=> 'phone',
-			'payment_terms_label'	=> 'payment_terms_name',
-			'payment_terms'	=> 'payment_terms_days',
-		);
-		$address_map = array ( // zoho_field_name => internal field name
-            "attention" => 'attention',
-            "address" => 'address1',
-            "street2" =>	'address2',
-            "city" => 'city',
-            "state" => 'state',
-            "zip" => 'postcode',
-            "country" => 'country',
-            "phone"=> 'phone',
-		);
-
 		if (! $this->isconnected() ) return false;
 
 		$response = $this->get_books ('contacts/'.$zoho_id);
@@ -497,35 +473,7 @@ class zoho_connector {
 		
 		$zoho_data = json_decode($response['body'], true);
 		if (isset ($zoho_data['contact'])) {
-			$zoho_contact = $zoho_data['contact']; 
-			foreach ($contact_map as $zoho_field_name => $int_field_name) {
-				if (isset ($zoho_contact[$zoho_field_name])) {
-					$result [$int_field_name] = $zoho_contact[$zoho_field_name];
-				} else {
-					$result [$int_field_name] = ''; // default to empty string
-				}
-			}
-			// now get addresses
-			if (isset ($zoho_contact ['billing_address'])){
-				foreach ($address_map as $zoho_field_name => $int_field_name) {
-					if (isset ($zoho_contact ['billing_address'][$zoho_field_name])) {
-						$result ['billing_address'][$int_field_name] = $zoho_contact['billing_address'][$zoho_field_name];
-					} else {
-						$result ['billing_address'][$int_field_name] = ''; // default to empty string
-					}
-				}
-			}
-			if (isset ($zoho_contact ['shipping_address'])) {
-				foreach ($address_map as $zoho_field_name => $int_field_name) {
-					if (isset ($zoho_contact ['shipping_address'][$zoho_field_name])) {
-						$result ['shipping_address'][$int_field_name] = $zoho_contact['shipping_address'][$zoho_field_name];
-					} else {
-						$result ['shipping_address'][$int_field_name] = ''; // default to empty string
-					}
-				}
-			}
-
-			return $result;
+			return $zoho_data['contact']; 
 		} else {
 			return false;
 		}
@@ -573,6 +521,58 @@ class zoho_connector {
 		}
 		return false;
 	}
+/*****
+* add_address
+*
+* adds a new address for specified customer.
+* fields must be in correct format for zoho
+****/	
+
+	public function add_address ($contact_id='', $address) {
+
+		if (! $this->isconnected() ) return false;
+		
+		if ($contact_id == '') return false;
+		
+		$response = $this->post_books ('contacts/'.$contact_id.'/address', $address);
+		if (!is_array($response)) return false;
+		
+		$zoho_data = json_decode($response['body'], true);
+		//bbz_debug ($zoho_data, 'zoho add address');
+		if (isset ($zoho_data['address_info'])) {
+			return $zoho_data['address_info'];
+		} else {
+			return false;
+		}	
+	
+	}
+	
+/*****
+* update_address
+*
+* updates an existing address for specified customer.
+* fields must be in correct format for zoho and zoho address id must be specified
+****/	
+
+	public function update_address ($contact_id='', $address, $address_id) {
+		//bbz_debug (array ($contact_id, $address_id, $address), 'In zoho update_address', false);
+		if (! $this->isconnected() ) return false;
+		
+		if ($contact_id == '') return false;
+		$url = 'contacts/'.$contact_id.'/address/'.$address_id;
+		$response = $this->put_books ($url, $address);
+		if (!is_array($response)) return false;
+		
+		$zoho_data = json_decode($response['body'], true);
+		//bbz_debug (array ($url, $zoho_data), 'Zoho PUT result');
+		if (isset ($zoho_data['address_info'])) {
+			return $zoho_data['address_info'];
+		} else {
+			return false;
+		}	
+	
+	}	
+	
 
 } //class
 ?>

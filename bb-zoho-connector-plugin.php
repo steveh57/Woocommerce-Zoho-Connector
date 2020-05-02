@@ -5,7 +5,7 @@
     Description:    Elements to link Bittern Books website to Zoho
     Author:         Steve Haines
     Author URI:     http://www.unilake.co.uk/
-    Version:        0.0316
+    Version:        0.0501
     Requirements:   PHP 5.2.4 or above, WordPress 3.4 or above. Admin Page Framework 3.1.3 or above
 */
 
@@ -13,12 +13,25 @@
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
-include_once ( dirname( __FILE__ ) . '/bbz-admin-page.php');
-include_once ( dirname( __FILE__ ) . '/bbz-user-registration.php');
-include_once ( dirname( __FILE__ ) . '/bbz-short-description.php');
-include_once ( dirname( __FILE__ ) . '/bbz-sales-history.php');
-include_once ( dirname( __FILE__ ) . '/bbz-functions.php');  // miscellaneous actions and filter functions
-include_once ( dirname( __FILE__ ) . '/bbz-registration-form.php'); // user registration form shortcode
+define ('BBZ_PATH', dirname( __FILE__ ));
+define ('BBZ_CLASSPATH', BBZ_PATH . '/classes' );
+include_once ( BBZ_PATH . '/bbz-definitions.php');
+include_once ( BBZ_PATH . '/bbz-utils.php');
+include_once ( BBZ_CLASSPATH . '/bbz-usermeta.php');
+include_once ( BBZ_CLASSPATH . '/bbz-addresses.php');
+include_once ( BBZ_CLASSPATH . '/bbz-zoho-connector.php');
+include_once ( BBZ_CLASSPATH . '/bbz-admin-form.php');
+include_once ( BBZ_CLASSPATH . '/bbz-test-form.php');
+include_once ( BBZ_CLASSPATH . '/bbz-linkuser-form.php');
+include_once ( BBZ_CLASSPATH . '/bbz-action-form.php');
+include_once ( BBZ_CLASSPATH . '/bbz-admin-page.php');
+include_once ( BBZ_PATH . '/bbz-wwlc-filters.php');
+include_once ( BBZ_PATH . '/bbz-short-description.php');
+include_once ( BBZ_PATH . '/bbz-wwof-filters.php');
+include_once ( BBZ_PATH . '/bbz-thwma-filters.php');
+
+include_once ( BBZ_PATH . '/bbz-functions.php');  // miscellaneous actions and filter functions
+include_once ( BBZ_PATH . '/bbz-registration-form.php'); // user registration form shortcode
 
 // Submenu class
 class bbz_submenu {
@@ -90,15 +103,12 @@ function bbz_admin_settings() {
  
 }
 
-// Run account payment gateway
+// Run account payment gateway - can't be loaded until woocommerce is loaded.
 add_action('plugins_loaded', 'bbz_init_account_payment_gateway');
 function bbz_init_account_payment_gateway()
 {
-//	if(class_exists('WC_Payment_Gateway'))
-//	{
-		require_once dirname( __FILE__ ) . '/bbz-class-wc-gateway-account.php';
+		require_once BBZ_CLASSPATH . '/bbz-wc-gateway-account.php';
 		new bbz_wc_gateway_account;
-//	}
 }
 add_filter('woocommerce_payment_gateways', 'bbz_register_account_payment_gateway');
 

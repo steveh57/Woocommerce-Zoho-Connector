@@ -9,11 +9,6 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-include_once ( dirname( __FILE__ ) . '/bbz-definitions.php');
-include_once ( dirname( __FILE__ ) . '/bbz-zoho-connector-class.php');
-include_once ( dirname( __FILE__ ) . '/bbz-sales-history.php');
-
-
 /**
  * Creates the submenu page for the plugin.
  *
@@ -93,30 +88,6 @@ class bbz_admin_form {
 				'title'			=> 'Reset Credentials',
 			)
 		),
-		'bbzform-link-user'	=> array (
-			'name'		=> 'bbzform-link-user',
-			'action'	=>	'link_user_action',
-			'title'		=>	'<h2>Link web user to Zoho customer</h2>',
-			'text_before'	=> '<p>Select wehsite and Zoho customers to link.  Linking will update billing and shipping addresses '.
-								'in WooCommerce</p>',
-			'fields'	=>	array (
-				'webuser'			=> array (
-					'type'			=> 'select',
-					'title'		=> 'Website User',
-					'optionfunc'	=> 'web_user_list',
-				),
-				'zohouser'	=> array (
-					'type'		=> 'select',
-					'title'		=> 'Zoho Customer',
-					'optionfunc'	=> 'zoho_user_list',
-				),
-			),
-			'button'		=> array (
-				'name'			=> 'submit',
-				'type'			=> 'primary',
-				'title'			=> 'Link user'
-			)
-		),
 		'bbzform-short-desc'	=> array (
 			'name'		=> 'bbzform-short-desc',
 			'action'	=>	'short_desc_action',
@@ -177,18 +148,7 @@ class bbz_admin_form {
 
 	);
 	
-	private function zoho_user_list () {
-		$zoho = new zoho_connector;
-		return $zoho->get_customer_names ();
-	}
-	
-	private function web_user_list () {
-		$webusers = get_users();
-		foreach ($webusers as $user) {
-			$results [$user->data->ID] = $user->user_email;
-		}
-		return $results;
-	}
+
 	private function attribute_list () {
 		$attributes = wc_get_attribute_taxonomies();
 		foreach ($attributes as $key=>$a) {
@@ -480,19 +440,7 @@ class bbz_admin_form {
 		
 	}
 	
-	private function link_user_action ($options) {
-		$webuser = $options['webuser'];  // wordpress user id
-		$zohouser = $options['zohouser']; //zoho user id
-		
-		$result = bbz_link_user (get_userdata ($webuser), $zohouser);
-		
-		if ($result) {
-			$this->set_admin_notice ($options, 'User linked successfully', 'success');
-		} else {
-			$this->set_admin_notice ($options, 'User link failed', 'error');
-		}
-		update_option(OPTION_NAME, $options);
-	}
+	
 	
 	
 }

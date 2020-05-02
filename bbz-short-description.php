@@ -13,8 +13,6 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-include_once ( dirname( __FILE__ ) . '/bbz-definitions.php');
-
 function bbz_short_description ($post_excerpt) {
 
 	$attr_map = array (

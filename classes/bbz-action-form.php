@@ -10,10 +10,6 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-include_once ( dirname( __FILE__ ) . '/bbz-definitions.php');
-include_once ( dirname( __FILE__ ) . '/bbz-zoho-connector-class.php');
-include_once ( dirname( __FILE__ ) . '/bbz-admin-forms.php');
-
 class bbz_action_form extends bbz_admin_form {
 
 	private $actionform	= array (
@@ -40,6 +36,7 @@ class bbz_action_form extends bbz_admin_form {
 					'options'	=> array (
 						'update-products'	=>	'Update Products',
 						'update-users'	=>	'Update user info and sales history',
+						'update-addresses' => 'Update all user addresses from zoho',
 						'check-products'	=>	'Check for missing products',
 					)
 				),
@@ -76,15 +73,26 @@ class bbz_action_form extends bbz_admin_form {
 			break;  // this is dealt with in display_data
 		
 		case 'update-users':
-			$result= bbz_load_sales_history('all',true);  //update sales history and payment terms for all linked users
+			$result= bbz_load_sales_history('all');  //update sales history  all linked users
+			if ($result) $result = bbz_update_payment_terms('all');
 			if (! $result) {
 				$this->set_admin_notice ($options, 'Sales history load failed', 'error');
 			} else {
-				$this->set_admin_notice ($options, $result.' users sales history updated', 'success');
+				$this->set_admin_notice ($options, $result.' users updated', 'success');
 			}
 			break;
 			
+		case 'update-addresses':
+			$result= $this->update_addresses('all',true);  //update sales history and payment terms for all linked users
+			if (! $result) {
+				$this->set_admin_notice ($options, 'Update addresses failed', 'error');
+			} else {
+				$this->set_admin_notice ($options, $result.' user addresses updated', 'success');
+			}
+			break;	
 		}
+		
+		
 		update_option(OPTION_NAME, $options);
 
 	}
@@ -249,6 +257,31 @@ class bbz_action_form extends bbz_admin_form {
 		} else {
 			return false;
 		}
+	}
+	
+	// update all users with a zoho id with addresses from zoho.
+	// this is really only to initialize the bbz_addresses array
+	
+	private function update_addresses () {
+		// if user not specified get list of all users
+		$users =  get_users() ;
+		$zoho = new zoho_connector;
+		$update_count = 0;
+		if (!empty ($users)) {
+			foreach ($users as $user) {
+				$user_meta = new bbz_usermeta ($user->ID);
+				$zoho_cust_id = $user_meta->get_zoho_id();
+				if (!empty ($zoho_cust_id) ) {
+					$zoho_contact = $zoho->get_contact_by_id($zoho_cust_id);
+					if (is_array ($zoho_contact)) {
+						$bbz_addresses = new bbz_addresses ($user->ID);
+						$bbz_addresses->load_from_zoho_contact ($zoho_contact);
+						$update_count += 1;
+					}
+				}
+			}
+		}
+		return $update_count;
 	}
 
 }

@@ -10,12 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-include_once ( dirname( __FILE__ ) . '/bbz-definitions.php');
-include_once ( dirname( __FILE__ ) . '/bbz-zoho-connector-class.php');
-include_once ( dirname( __FILE__ ) . '/bbz-admin-forms.php');
-include_once ( dirname( __FILE__ ) . '/bbz-sales-history.php');
-include_once ( dirname( __FILE__ ) . '/bbz-test.php');
-include_once ( dirname( __FILE__ ) . '/bbz-actions.php');
+
 
 /**
  * Creates the submenu page for the plugin.
@@ -116,7 +111,7 @@ class bbz_admin_page {
 				$form = new bbz_action_form ();
 				break;
 			case 'link-user':
-				$form = new bbz_admin_form ('bbzform-link-user');
+				$form = new bbz_linkuser_form ();
 				break;
 			case 'short-desc':
 //				echo '<pre>';

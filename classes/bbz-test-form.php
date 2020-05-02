@@ -10,10 +10,6 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-include_once ( dirname( __FILE__ ) . '/bbz-definitions.php');
-include_once ( dirname( __FILE__ ) . '/bbz-zoho-connector-class.php');
-include_once ( dirname( __FILE__ ) . '/bbz-admin-forms.php');
-
 class bbz_test_form extends bbz_admin_form {
 
 	private $testform = array (

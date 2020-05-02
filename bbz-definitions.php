@@ -8,6 +8,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @package Custom_Admin_Settings
  */
+ 
+
+
 //define ('NONCE_NAME', 'bbz-nonce');
 define ('SAVE_ACTION', 'bbz-save');
 define ('OPTION_NAME', 'bbz-options');
@@ -27,6 +30,10 @@ define ('BBZ_PM_INACTIVE_REASON', 'bbz_inactive_reason');
 define ('BBZ_UM_ZOHO_ID', 'zoho_contact_id');
 define ('BBZ_UM_PAYMENT_TERMS', 'bbz_payment_terms');
 define ('BBZ_UM_SALES_HISTORY', 'bbz_sales_history');
+define ('BBZ_UM_ADDRESSES', 'bbz_addresses');
+
+global $bbz_product_index;  //make global to avoid reloading
+$bbz_product_index = array();
 
 
 ?>

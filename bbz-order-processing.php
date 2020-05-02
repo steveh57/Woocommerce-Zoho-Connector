@@ -8,8 +8,6 @@
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
- 
-include_once ( dirname( __FILE__ ) . '/bbz-definitions.php');
 
 add_action( 'woocommerce_payment_complete', 'bbz_order_processing');
 
