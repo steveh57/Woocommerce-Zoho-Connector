@@ -18,6 +18,7 @@ define ('ZOHO_AUTH_URL', 'https://accounts.zoho.com/oauth/v2/');
 define ('ZOHO_BOOKS_API_URL', 'https://books.zoho.com/api/v3/');
 define ('ZOHO_ANALYTICS_API_URL', 'https://analyticsapi.zoho.com/api/steve@bitternbooks.co.uk/ZohoBooks/');
 define ('ZOHO_AUTH_SCOPE', 'ZohoBooks.fullaccess.all,ZohoReports.data.read');
+define ('ZOHO_SALESORDER_PREFIX', 'WO-');
 
 // Post Meta tags
 define ('BBZ_PM_ZOHO_ID', 'zoho_item_id');
@@ -31,6 +32,10 @@ define ('BBZ_UM_ZOHO_ID', 'zoho_contact_id');
 define ('BBZ_UM_PAYMENT_TERMS', 'bbz_payment_terms');
 define ('BBZ_UM_SALES_HISTORY', 'bbz_sales_history');
 define ('BBZ_UM_ADDRESSES', 'bbz_addresses');
+
+// Account IDs
+define ('ZOHO_PAYPAL_ACCOUNT_ID', '1504573000005379057');
+define ('ZOHO_STRIPE_ACCOUNT_ID', '1504573000000149167');
 
 global $bbz_product_index;  //make global to avoid reloading
 $bbz_product_index = array();

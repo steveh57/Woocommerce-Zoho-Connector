@@ -5,6 +5,17 @@
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
+/****
+* bbz_link_user
+*
+* Used to link a woo user to a zoho customer.  The zoho_id is loaded into user meta, 
+* along with payment terms and addresses.
+*
+* $user_id	if specified this is the user to be linked.
+*			if blank, defaults to current user
+* $zoho_id	optional - if unknown we look up the zoho id from the email address
+*
+*****/
 
 function bbz_link_user ($user_id='', $zoho_id='') {  //$user is wp user object
 
@@ -95,9 +106,10 @@ function bbz_update_payment_terms ( $arg='') {
 
 
 function bbz_debug ($data, $title='', $exit=true) {
-	if(empty($data)) $data = '<NO DATA>';
-	if (!$data) $data = '<FALSE>';
-	echo $title, '<pre>';
+	if (is_null ($data)) $data = 'NULL';
+	if ($data===false) $data = 'FALSE';
+	if (empty($data)) $data = 'NO DATA';
+	echo '<br>', $title, '<pre>';
 	print_r ($data);
 	echo '</pre>';
 	if ($exit) exit;
@@ -116,6 +128,27 @@ function bbz_build_user_list ($arg) {
 		$user_list[] = $arg;
 	}
 	return $user_list;
+}
+
+function bbz_is_wholesale_customer ($user_id = '') {
+	if (empty($user_id) && is_user_logged_in()) {
+		$user = wp_get_current_user();
+	} else {
+		$user = get_user_by ('id', $user_id);
+	}
+	if (is_object ($user) ) {
+		foreach ($user->roles as $role) {
+			if ('wholesale_customer' == $role) return true;
+		}
+	}
+	return false;
+}
+
+function bbz_email_admin ($subject, $message) {
+	//bbz_debug (array ('Subject'=>$subject, 'Message'=>$message), 'Email to Admin');
+	$admin_email = get_option ('admin_email');
+	wp_mail ($admin_email, $subject, $message);
+
 }
 
 ?>

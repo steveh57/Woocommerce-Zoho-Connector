@@ -105,11 +105,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 		$options = get_option( OPTION_NAME );
 		$request_url = $zoho_api_url.$request;
 		$request_args = array(
-			'headers' => array (
-				'Authorization' => 'Zoho-oauthtoken '.$options ['access_token']
-			),
-			'body'	=> 'JSONString='.json_encode ($postdata),
-		);
+			'headers' => array ('Authorization' => 'Zoho-oauthtoken '.$options ['access_token']),
+			'body' => '',
+			);
+		if (!empty ($postdata)) {
+			$request_args ['body'] = 'JSONString='.json_encode ($postdata);
+		}
 		$options ['last_request'] = $request_url;
 		update_option (OPTION_NAME, $options);
 		
@@ -572,7 +573,136 @@ if ( ! defined( 'ABSPATH' ) ) {
 		}	
 	
 	}	
-	
 
+/*****
+* create_sales_order
+*
+* creates a new sales order
+* $order is an array formatted for zoho containing the order.
+* $confirm confirms the order automatically.  If false order is left as draft.
+****/	
+
+	public function create_salesorder ($order, $confirm=false) {
+
+		if (! $this->isconnected() ) return false;
+		
+		if (! is_array($order) ) return false;
+		
+		$request = 'salesorders';
+		if (isset ($order['salesorder_number'])) $request .= '?ignore_auto_number_generation=true'; 
+		
+		
+		$response = $this->post_books ($request, $order);
+		if (!is_array($response)) return false;
+		
+		$zoho_data = json_decode($response['body'], true);
+		//bbz_debug ($zoho_data, 'create_sales_order result', false);
+		if (isset ($zoho_data['salesorder']['salesorder_id'])) {
+			$this->salesorder_confirm ($zoho_data['salesorder']['salesorder_id']);
+			return $zoho_data['salesorder'];
+		} else {
+			return false;
+		}	
+	
+	}	
+	
+	/****
+	* salesorder_confirm
+	*
+	* Change sales order status to confirmed
+	*****/
+	public function salesorder_confirm ($order_id) {
+
+		if (! $this->isconnected() ) return false;
+		
+		$request = 'salesorders/'.$order_id.'/status/confirmed';
+		return $this->post_books ($request);
+		// bbz_debug ($response, 'Confirmed?');
+	}
+	
+	/****
+	* salesorder_addcomment
+	*
+	* Adds a comment in the sales order history
+	*****/
+	
+	public function salesorder_addcomment ($order_id, $comment) {
+
+		if (! $this->isconnected() ) return false;
+		
+		$content = array('description' => $comment);
+		$request = 'salesorders/'.$order_id.'/comments';
+		//bbz_debug (array($request, $comment), 'Add Comment', false);
+		return $this->post_books ($request, $content);
+		// bbz_debug ($response, 'Confirmed?');
+	}
+
+/*****
+* create_invoice
+*
+* creates a new invoice
+* $invoice is an array formatted for zoho containing the invoice.
+* $confirm confirms the invoice automatically.  If false, invoice is left as draft.
+****/	
+
+	public function create_invoice ($invoice, $confirm=false) {
+
+		if (! $this->isconnected() ) return false;
+		
+		if (! is_array($invoice) ) return false;
+		
+		$request = 'invoices';
+		if (isset ($invoice['invoice_number'])) $request .= '?ignore_auto_number_generation=true'; 
+		
+		$response = $this->post_books ($request, $invoice);
+		if (!is_array($response)) return false;
+		
+		$zoho_data = json_decode($response['body'], true);
+		//bbz_debug ($zoho_data, 'create_sales_order result', false);
+		
+		if (isset ($zoho_data['invoice']['invoice_id'])) {
+			$this->invoice_confirm ($zoho_data['invoice']['invoice_id']);
+			return $zoho_data['invoice'];
+		} else {
+			return false;
+		}
+	}
+	/****
+	* invoice_confirm
+	*
+	* Change invoice status to sent
+	*****/
+	public function invoice_confirm ($invoice_id) {
+
+		if (! $this->isconnected() ) return false;
+		
+		$request = 'invoices/'.$invoice_id.'/status/sent';
+		return $this->post_books ($request);
+		// bbz_debug ($response, 'Confirmed?');
+	}
+	
+	/****
+	* create_payment
+	*
+	* Record a payment
+	****/
+	public function create_payment ($payment) {
+
+		if (! $this->isconnected() ) return false;
+		
+		if (! is_array($payment) ) return false;
+		
+		$request = 'customerpayments';
+		
+		$response = $this->post_books ($request, $payment);
+		if (!is_array($response)) return false;
+		
+		$zoho_data = json_decode($response['body'], true);
+		bbz_debug ($zoho_data, 'create_payment result', false);
+		
+		return $zoho_data;
+	}
+
+	
 } //class
 ?>

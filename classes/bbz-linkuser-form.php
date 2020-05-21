@@ -49,6 +49,7 @@ class bbz_linkuser_form extends bbz_admin_form {
 	
 	public function web_user_list () {
 		$webusers = get_users();
+		$results [0] = "GUEST USER";  // Insert special case for guest user
 		foreach ($webusers as $user) {
 			$results [$user->data->ID] = $user->user_email;
 		}
@@ -58,8 +59,12 @@ class bbz_linkuser_form extends bbz_admin_form {
 		$webuser = $options['webuser'];  // wordpress user id
 		$zohouser = $options['zohouser']; //zoho user id
 		
-		$result = bbz_link_user ($webuser, $zohouser);
-		
+		if ($webuser == 0) { // Guest user selected
+			$options['guestuserid'] = $zohouser;
+			$result = true;
+		} else {
+			$result = bbz_link_user ($webuser, $zohouser);
+		}
 		if ($result) {
 			$this->set_admin_notice ($options, 'User linked successfully', 'success');
 		} else {

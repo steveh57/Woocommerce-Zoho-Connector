@@ -281,6 +281,7 @@ class bbz_action_form extends bbz_admin_form {
 				}
 			}
 		}
+		//bbz_debug ($update_count, 'Update Addresses Finished');
 		return $update_count;
 	}
 

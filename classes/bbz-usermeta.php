@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
  class bbz_usermeta {
-	private $user_id;
+	private $user_id;  // value will be false if guest
 	
 	function __construct($arg_user_id='') {
 		$this->user_id = empty ($arg_user_id) ? get_current_user_id () : $arg_user_id;
@@ -41,6 +41,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	}
 	
+	public function get_user_id () {
+		return $this->user_id;
+	}
+	
 	public function get_zoho_id () {
 		 return get_user_meta ($this->user_id, BBZ_UM_ZOHO_ID, true);
 	}
@@ -61,6 +65,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 		return get_user_meta ($this->user_id, BBZ_UM_ADDRESSES, true);
 	}
 	// update a specific bbz address
+	// if bbz_addresses doesn't exist in user meta it is created.
+	// returns updated bbz addresses array
 	public function update_bbz_address ($type, $key, $address) {
 		$bbz_addresses = $this->get_bbz_addresses();
 		$bbz_addresses = is_array ($bbz_addresses) ? $bbz_addresses : array();

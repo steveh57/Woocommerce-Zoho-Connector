@@ -42,10 +42,7 @@ function bbz_availability_filter( $availability ) {
 			break;
 	
 		case 'available-on-backorder':
-			$user = wp_get_current_user();
-			foreach ($user->roles as $role) {
-				if ('wholesale_customer' == $role) return $availability;
-			}
+			if (bbz_is_wholesale_customer()) return $availability;  // continue with standard text
 			$text = 'Not currently available';  //backorder only available to wholesale users
 			break;
 			
@@ -65,11 +62,7 @@ add_filter( 'woocommerce_is_purchasable', 'bbz_is_purchasable_filter', 20, 2);
 
 function bbz_is_purchasable_filter( $purchasable, $product ) {
 	if ($purchasable && in_array ($product->get_stock_status(), array ('onbackorder', 'outofstock'))) {
-		$user = wp_get_current_user();
-		foreach ($user->roles as $role) {
-			if ('wholesale_customer' == $role) return $purchasable;
-		}
-		return false;
+		if (!bbz_is_wholesale_customer()) return false;
 	}
 	return $purchasable;
 }
@@ -173,18 +166,34 @@ function bbz_user_banner() {
 	if(is_cart() || is_checkout() ){ 
 		$roles = "";
 		$banner_text = "Free shipping for orders over £30";
-		if( is_user_logged_in() ) {
-			$user = wp_get_current_user();
-			$roles = ( array ) $user->roles;
-
-			foreach($roles as $value){
-				if($value=="wholesale_customer"){
-					$banner_text = "Free shipping for orders over £60";
-				}
-			}
+		if( bbz_is_wholesale_customer () ) {
+			$banner_text = "Free shipping for orders over £60";
 		}
 		echo '<div class="bbz-user-banner">'. $banner_text.'</div>';
 	}
+}
+
+/**
+ * Order handling
+ * Called when order is complete to post order in Zoho
+ */
+
+add_action( 'woocommerce_thankyou', 'bbz_order_processing');
+
+function bbz_order_processing( $order_id ){	
+
+	//bbz_debug ($order_id, 'In bbz_order_processing');
+	$order = new bbz_order;
+	$zoho_order = $order->process_new_order ($order_id);
+	//bbz_debug ($zoho_order, 'Order Processing complete', false);
+}
+
+// Change address placeholder text
+
+add_filter('woocommerce_default_address_fields', 'override_address_fields');
+function override_address_fields( $address_fields ) {
+	$address_fields['address_2']['placeholder'] = 'District';
+return $address_fields;
 }
 
 ?>
