@@ -106,13 +106,15 @@ function bbz_update_payment_terms ( $arg='') {
 
 
 function bbz_debug ($data, $title='', $exit=true) {
-	if (is_null ($data)) $data = 'NULL';
-	if ($data===false) $data = 'FALSE';
-	if (empty($data)) $data = 'NO DATA';
-	echo '<br>', $title, '<pre>';
-	print_r ($data);
-	echo '</pre>';
-	if ($exit) exit;
+	if ( BBZ_DEBUG ) {
+		if (is_null ($data)) $data = 'NULL';
+		if ($data===false) $data = 'FALSE';
+		if (empty($data)) $data = 'NO DATA';
+		echo '<br>', $title, '<pre>';
+		print_r ($data);
+		echo '</pre>';
+		if ($exit) exit;
+	}
 }
 function bbz_build_user_list ($arg) {
 	$user_list = array();

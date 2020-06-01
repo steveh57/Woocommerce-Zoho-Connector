@@ -196,4 +196,28 @@ function override_address_fields( $address_fields ) {
 return $address_fields;
 }
 
+/**
+ * Ajax Add to Cart
+ * Load js script from woo_ajax_add_to_cart plugin
+ * Modified to load on all pages so it works with wishlist page.
+ */
+ if (!defined('QLWCAJAX_PLUGIN_VERSION')) {
+  define('QLWCAJAX_PLUGIN_VERSION', '1.1.4');
+}
+ if (!defined('QLWCAJAX_JS_FILENAME')) {
+  define('QLWCAJAX_JS_FILENAME', 'woo-ajax-add-to-cart.min.js');
+}
+add_action('wp_enqueue_scripts', 'bbz_add_product_js', 99);
+function bbz_add_product_js() {
+
+  wp_register_script('woo-ajax-add-to-cart', plugin_dir_url(__FILE__) . 'assets/'.QLWCAJAX_JS_FILENAME, array('jquery', 'wc-add-to-cart'), QLWCAJAX_PLUGIN_VERSION, true);
+
+//      if (function_exists('is_product') && is_product()) {
+	wp_enqueue_script('woo-ajax-add-to-cart');
+//      }
+}
+	
+	
+ 
+ 
 ?>

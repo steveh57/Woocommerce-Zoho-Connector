@@ -698,7 +698,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		if (!is_array($response)) return false;
 		
 		$zoho_data = json_decode($response['body'], true);
-		bbz_debug ($zoho_data, 'create_payment result', false);
+		//bbz_debug (array($payment, $zoho_data), 'create_payment result', false);
 		
 		return $zoho_data;
 	}

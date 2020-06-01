@@ -211,6 +211,8 @@ class bbz_test_form extends bbz_admin_form {
 			echo '<br>No data returned';
 		}
 		unset ($options['function']);
+		update_option ( OPTION_NAME, $options);
+		
 		
 	}
 

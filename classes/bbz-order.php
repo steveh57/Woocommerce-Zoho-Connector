@@ -191,6 +191,7 @@ class bbz_order {
 		$zoho_order ['customer_id'] = $zoho_cust_id;
 		$zoho_order ['shipping_address_id'] = $zoho_address_id;
 		$zoho_order ['salesorder_number'] = ZOHO_SALESORDER_PREFIX.$order->get_order_number();
+		$zoho_order ['reference_number'] = $order->get_shipping_last_name();
 		$zoho_order ['custom_fields'][] = array (
 				'customfield_id'	=> '1504573000002888095', // Order source
 				'value'				=> 'Website',
@@ -294,11 +295,13 @@ class bbz_order {
 		if (stristr ($order->get_payment_method(), 'paypal')) {
 			$zoho_payment ['payment_mode'] = 'Paypal';
 			$zoho_payment ['account_id'] = ZOHO_PAYPAL_ACCOUNT_ID;
+			$zoho_payment ['bank_charges'] = $order->get_meta ('_paypal_transaction_fee', true);
+			$zoho_payment ['description'] = 'Paid by '.$order->get_meta ('Payer PayPal address', true);
 		} elseif (stristr ($order->get_payment_method(), 'stripe')) {
 			$zoho_payment ['payment_mode'] = 'Stripe';
 			$zoho_payment ['account_id'] = ZOHO_STRIPE_ACCOUNT_ID;
 		} else return false;
-		$zoho_payment ['reference_number'] = $order->get_transaction_id();
+		$zoho_payment ['reference_number'] = $zoho_invoice ['reference_number'];
 
 		//bbz_debug ($zoho_payment, 'Payment array before sending', false);
 		

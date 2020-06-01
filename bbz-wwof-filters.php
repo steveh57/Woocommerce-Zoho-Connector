@@ -52,10 +52,10 @@ function bbz_wwof_product_filter ($product_args) {
 			
 		}
 		if (in_array ('9991', $wwof_product_list)) {	
-			$new_product_list = array_merge ($product_list, wc_get_product_ids_on_sale());
+			$new_product_list = array_merge ($new_product_list, wc_get_product_ids_on_sale());
 		}
 		if (in_array ('9992', $wwof_product_list)) {	
-			$new_product_list = array_merge ($product_list, wc_get_featured_product_ids());
+			$new_product_list = array_merge ($new_product_list, wc_get_featured_product_ids());
 		}
 
 		if (!empty($new_product_list)) $product_args['post__in'] = $new_product_list;

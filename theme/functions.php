@@ -25,23 +25,6 @@ add_action( 'woocommerce_single_product_summary', 'woocommerce_template_single_a
 
 
 /**
- * Override loop template and show quantities next to add to cart buttons
- *
- * Note detail button is removed by means of a modified template wc-show-details-button in the child theme
- */
-//add_filter( 'woocommerce_loop_add_to_cart_link', 'quantity_inputs_for_woocommerce_loop_add_to_cart_link', 10, 2 );
-function quantity_inputs_for_woocommerce_loop_add_to_cart_link( $html, $product ) {
-	if ( $product && $product->is_type( 'simple' ) && $product->is_purchasable() && $product->is_in_stock() && ! $product->is_sold_individually() ) {
-		$html = '<form action="' . esc_url( $product->add_to_cart_url() ) . '" class="cart" method="post" enctype="multipart/form-data">';
-		$html .= woocommerce_quantity_input( array(), $product, false );
-		$html .= '<button type="button" class="fusion-button button-flat button-default add_to_cart_button ajax_add_to_cart">' .
-		'<span class="fusion-button-text">' . esc_html( $product->add_to_cart_text() ) . '</span></button>';
-		$html .= '</form>';
-	}
-	return $html;
-}
-
-/**
  * Create a shortcode for custom registration form
  */
   

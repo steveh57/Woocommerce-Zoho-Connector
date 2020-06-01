@@ -19,6 +19,7 @@ define ('ZOHO_BOOKS_API_URL', 'https://books.zoho.com/api/v3/');
 define ('ZOHO_ANALYTICS_API_URL', 'https://analyticsapi.zoho.com/api/steve@bitternbooks.co.uk/ZohoBooks/');
 define ('ZOHO_AUTH_SCOPE', 'ZohoBooks.fullaccess.all,ZohoReports.data.read');
 define ('ZOHO_SALESORDER_PREFIX', 'WO-');
+define ('BBZ_DEBUG', false);  //set to false on live site
 
 // Post Meta tags
 define ('BBZ_PM_ZOHO_ID', 'zoho_item_id');
