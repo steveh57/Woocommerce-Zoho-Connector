@@ -184,8 +184,8 @@ function bbz_order_processing( $order_id ){
 
 	//bbz_debug ($order_id, 'In bbz_order_processing');
 	$order = new bbz_order;
-	$zoho_order = $order->process_new_order ($order_id);
-	//bbz_debug ($zoho_order, 'Order Processing complete', false);
+	$order->process_new_order ($order_id);
+	// error handling is dealt with by process_new_order
 }
 
 // Change address placeholder text
@@ -216,7 +216,36 @@ function bbz_add_product_js() {
 	wp_enqueue_script('woo-ajax-add-to-cart');
 //      }
 }
-	
+// Add affiliate links to permalinks.  works with Yith Woocommerce Affiliate plugin
+add_filter ('post_type_link', 'bbz_add_affiliate_ref', 10, 3);
+function bbz_add_affiliate_ref ($permalink, $post, $leavename) {
+	$token = '';
+	if (class_exists('YITH_WCAF_Affiliate_Handler') ) {
+		$user_id = get_current_user_id();
+
+		if ( ! empty ($user_id)) {
+			$WCAF_handler = YITH_WCAF_Affiliate_Handler();
+			$affiliate = $WCAF_handler->get_affiliate_by_user_id ($user_id, $enabled=true, $exclude_banned=true);
+			if(!empty($affiliate)) {
+				$token = $affiliate['token'];
+				$ref_name = $WCAF_handler->get_ref_name();
+			}
+		}
+		//echo add_query_arg ($ref_name, $token, $permalink);exit;
+	}
+	return empty ($token) ? $permalink : add_query_arg ($ref_name, $token, $permalink);
+}
+
+// ignore affiliate link if user is wholesale - i.e.no commission
+add_filter ('yith_wcaf_is_valid_token', 'bbz_affiliate_exclude_wholesale', 10, 1);
+function bbz_affiliate_exclude_wholesale ($is_valid_token) {
+	if ($is_valid_token && bbz_is_wholesale_customer() ){
+		return false;
+	}
+	return $is_valid_token;
+}
+
+
 	
  
  

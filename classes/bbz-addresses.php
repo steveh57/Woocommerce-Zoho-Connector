@@ -188,11 +188,16 @@ class bbz_addresses {
 		$zoho = new zoho_connector;
 		$result = $zoho->add_address ($zoho_contact_id, $zoho_address);
 		//bbz_debug (array($result, $zoho_address, $zoho_contact_id), 'After zoho add_address', false);
-		if (is_array ($result) && isset ($result ['address_id'])) {
+		if (is_wp_error ($result)) {
+			$result->add('bbz-adr-001', 'bbz_addresses->add_address failed', array (
+				'woo_address'=> $woo_address,
+				'type' => $type,
+				'address_id', $address_id));
+			return $result;
+		} else {
 			$woo_address [$type.'_zoho_id'] = $result ['address_id'];
 			return $this->user_meta->update_bbz_address ($type, $address_id, $woo_address);
 		}
-		return false;
 		//bbz_debug ($user_meta->get_bbz_addresses(), 'BBZ_ADDRESSES after add', false);
 	}
 
@@ -208,16 +213,18 @@ class bbz_addresses {
 	private function add_guest_address ($woo_address, $type, $zoho_guest_id) {
 		// convert woo address to zoho format
 		$zoho_address = $this->get_zoho_address ($woo_address, $type);
-		//$zoho_contact_id = $this->user_meta->get_zoho_id();
-		//bbz_debug ($zoho_address, 'Zoho Address in add guest address', false);
 		$zoho = new zoho_connector;
+		// add to zoho guest account
 		$result = $zoho->add_address ($zoho_guest_id, $zoho_address);
-		//bbz_debug (array($result, $zoho_address, $zoho_guest_id), 'After zoho add_address', false);
-		if (is_array ($result) && isset ($result ['address_id'])) {
+		if (is_wp_error ($result)) {
+			$result->add('bbz-adr-002', 'bbz_addresses->add_guest_address failed', array (
+				'woo_address'=> $woo_address,
+				'type' => $type,
+				'guest_id', $zoho_guest_id));
+			return $result;
+		} else {
 			return $result ['address_id'];
 		}
-		return false;
-		//bbz_debug ($user_meta->get_bbz_addresses(), 'BBZ_ADDRESSES after add', false);
 	}
 
 	
@@ -244,13 +251,16 @@ class bbz_addresses {
 		// now load update to zoho api
 		$zoho = new zoho_connector;
 		$result = $zoho->update_address ($zoho_contact_id, $zoho_address, $address_id);
-		//bbz_debug ($result, 'After zoho update_address', false);
-		if (is_array ($result) && isset ($result ['address_id'])) {
+		if (is_wp_error ($result)) {
+			$result->add ('bbz-adr-003', 'bbz_addresses->update_address failed', array (
+				'zoho contact id'=> $zoho_contact_id, 
+				'zoho address' => $zoho_address,
+				'address id' => $address_id));
+			return $result;
+		} else {
 			$woo_address [$type.'_zoho_id'] = $result ['address_id'];
 			return $this->user_meta->update_bbz_address ($type, $address_id, $woo_address);
 		}
-		return false;
-		//bbz_debug ($user_meta->get_bbz_addresses(), 'BBZ_ADDRESSES after update');
 	}	
 
 	/*****
@@ -448,13 +458,6 @@ class bbz_addresses {
 		foreach ($order_address as $key=>$value) {
 			$woo_address [$type.'_'.$key] = $value;
 		}
-		/*bbz_debug (array(
-			'order address'=>$order_address,
-			'woo Address'=>$woo_address,
-			'type'=>$type,
-			'guest zoho id'=>$guest_zoho_id,
-			'bbz_addresses'=>$this->bbz_addresses), 'In get_zoho_address_id', false);
-		*/	
 		// is this a guest user?
 		if (!empty($guest_zoho_id) ) {
 			// create new address for guest user
@@ -462,7 +465,12 @@ class bbz_addresses {
 		
 		} else { // registered user
 			// find match - address should have been created for user already 
-			$zoho_address_id = false;  // in case not found
+			$zoho_address_id = new WP_Error ('bbz-adr-004','Registered user address id not found', array(
+				'order address'=>$order_address,
+				'woo Address'=>$woo_address,
+				'type'=>$type,
+				'guest zoho id'=>$guest_zoho_id,
+				'bbz_addresses'=>$this->bbz_addresses));  // in case not found
 			if (!empty ($this->bbz_addresses[$type])) {
 				foreach ($this->bbz_addresses[$type] as $address_id=>$bbz_address) {
 					if ($this->is_same ($woo_address, $bbz_address, $type) ) {

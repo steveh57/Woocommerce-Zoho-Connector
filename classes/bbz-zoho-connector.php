@@ -145,17 +145,59 @@ if ( ! defined( 'ABSPATH' ) ) {
 	****/
 	
 	public function get_books ($request, $filter=array()) {
-		if (! $this->isconnected() ) return false;
-		return $this->_get_data (ZOHO_BOOKS_API_URL, $request, $filter);
+		if (! $this->isconnected() ) return new WP_Error ('bbz-zc-101', 'Zoho connection failed in get_books');
+		$response = $this->_get_data (ZOHO_BOOKS_API_URL, $request, $filter);
+		if (!is_array($response)) {
+			return new WP_Error ('bbz-zc-102', 'Zoho get_data failed', array(
+				'response'=>$response));
+		} else {
+			$zoho_data = json_decode($response['body'], true);
+			// shoulde return an array with ['code'] and ['message'] and ['some data']
+			// code=0 = success
+			if (!isset($zoho_data['code']) || $zoho_data['code'] !== 0 ) {
+				return new WP_Error ('bbz-zc-103', 'Zoho get_data failed', $zoho_data);
+			} else {
+				return $zoho_data;
+			}
+		}
+
 	}
+	
 	public function post_books ($request, $postdata=array()) {
-		
-		if (! $this->isconnected() ) return false;
-		return $this->_post_data (ZOHO_BOOKS_API_URL, $request, $postdata);
+		// returns either wp_error or data array
+		if (! $this->isconnected() ) return new WP_Error ('bbz-zc-001', 'Zoho connection failed in post_books');
+		$response =  $this->_post_data (ZOHO_BOOKS_API_URL, $request, $postdata);
+		if (!is_array($response)) {
+			return new WP_Error ('bbz-zc-002', 'Zoho post_data failed', array(
+				'response'=>$response));
+		} else {
+			$zoho_data = json_decode($response['body'], true);
+			// shoulde return an array with ['code'] and ['message'] and ['some data']
+			// code=0 = success
+			if (!isset($zoho_data['code']) || $zoho_data['code'] !== 0 ) {
+				return new WP_Error ('bbz-zc-003', 'Zoho post_data failed', $zoho_data);
+			} else {
+				return $zoho_data;
+			}
+		}
 	}
+	
 	public function put_books ($request, $postdata=array()) {
-		if (! $this->isconnected() ) return false;
-		return $this->_put_data (ZOHO_BOOKS_API_URL, $request, $postdata);
+		if (! $this->isconnected() )
+			return new WP_Error ('bbz-zc-004', 'Zoho connection failed in put_books');
+		$response = $this->_put_data (ZOHO_BOOKS_API_URL, $request, $postdata);
+		if (!is_array($response)) {
+			return new WP_Error ('bbz-zc-005', 'Zoho put_data failed', array(
+				'response'=>$response));
+		} else {
+			$zoho_data = json_decode($response['body'], true);
+			if (!isset($zoho_data['code']) || $zoho_data['code'] !== 0 ) {
+				return new WP_Error ('bbz-zc-006', 'Zoho put_data failed', $zoho_data);
+			} else {
+				return $zoho_data;
+			}
+		}
+		
 	}
 
 	/****
@@ -214,9 +256,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 		while ($more_pages) {
 			$filter = array ('page'=>$next_page);
 			// fetch item data from Zoho
-			$response = $this->get_books ('items', $filter);
-			if (!is_array($response)) break;
-			$zoho_data = json_decode($response['body'], true);
+			$zoho_data = $this->get_books ('items', $filter);
+			if (is_wp_error($zoho_data)) break;
 			if (isset ($zoho_data['page_context'])) {
 				$more_pages = $zoho_data['page_context']['has_more_page'];
 				$next_page = $zoho_data['page_context']['page'] + 1;
@@ -273,9 +314,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 				'contact_type'	=> 'customer',
 			);
 			// fetch item data from Zoho
-			$response = $this->get_books ('contacts', $filter);
-			if (!is_array($response)) break;
-			$zoho_data = json_decode($response['body'], true);
+			$zoho_data = $this->get_books ('contacts', $filter);
+			if (is_wp_error($zoho_data)) break;
 			if (isset ($zoho_data['page_context'])) {
 				$more_pages = $zoho_data['page_context']['has_more_page'];
 				$next_page = $zoho_data['page_context']['page'] + 1;
@@ -401,9 +441,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 				'contact_type'	=> 'customer',
 			);
 			// fetch item data from Zoho
-			$response = $this->get_books ('contacts', $filter);
-			if (!is_array($response)) break;
-			$zoho_data = json_decode($response['body'], true);
+			$zoho_data = $this->get_books ('contacts', $filter);
+			if (is_wp_error($zoho_data)) break;
 			if (isset ($zoho_data['page_context'])) {
 				$more_pages = $zoho_data['page_context']['has_more_page'];
 				$next_page = $zoho_data['page_context']['page'] + 1;
@@ -429,20 +468,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	public function get_contact_address ($contact_id='') {
 
-		if (! $this->isconnected() ) return false;
-		
 		if ($contact_id == '') return false;
 		
 //		$filter = array ('email'=>$email);
 //		$request = 'contacts/'.$contact_id.'/address';
-		$response = $this->get_books ('contacts/'.$contact_id.'/address');
-		if (!is_array($response)) return false;
+		$zoho_data = $this->get_books ('contacts/'.$contact_id.'/address');
+		if (is_wp_error($zoho_data)) {
+			$zoho_data->add ('bbz-zc-110', 'get_contact_address failed', $zoho_data);
+			return $zoho_data;
+		}
 		
-		$zoho_data = json_decode($response['body'], true);
 		if (isset ($zoho_data['addresses'])) {
 			return $zoho_data['addresses'];
 		} else {
-			return false;
+			return new WP_Error ('bbz-zc-111', 'get_contact_address failed', $zoho_data);
 		}	
 	
 	}
@@ -466,17 +505,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 	public function get_contact_by_id ($zoho_id='') {
 		if (empty($zoho_id)) return false;
 	
-		if (! $this->isconnected() ) return false;
-
-		$response = $this->get_books ('contacts/'.$zoho_id);
+		$zoho_data = $this->get_books ('contacts/'.$zoho_id);
+		if (is_wp_error($zoho_data)) {
+			$zoho_data->add ('bbz-zc-112', 'get_contact_by_id failed', $zoho_data);
+			return $zoho_data;
+		}
 		
-		if (!is_array($response)) return false;
-		
-		$zoho_data = json_decode($response['body'], true);
 		if (isset ($zoho_data['contact'])) {
 			return $zoho_data['contact']; 
 		} else {
-			return false;
+			return new WP_Error ('bbz-zc-111', 'get_contact_by_id failed', $zoho_data);
 		}
 
 	}
@@ -531,19 +569,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	public function add_address ($contact_id='', $address) {
 
-		if (! $this->isconnected() ) return false;
-		
-		if ($contact_id == '') return false;
-		
 		$response = $this->post_books ('contacts/'.$contact_id.'/address', $address);
-		if (!is_array($response)) return false;
-		
-		$zoho_data = json_decode($response['body'], true);
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zc-020', 'Zoho add_address failed', array(
+				'contact_id'=>$contact_id,
+				'address'=>$address));
+			return $response;
+		}
 		//bbz_debug ($zoho_data, 'zoho add address');
-		if (isset ($zoho_data['address_info'])) {
-			return $zoho_data['address_info'];
+		if (isset ($response['address_info'])) {
+			return $response['address_info'];
 		} else {
-			return false;
+			return new WP_Error ('bbz-zc-021', 'Zoho add_address failed', array(
+				'contact_id'=>$contact_id,
+				'address'=>$address,
+				'response'=>$response));
 		}	
 	
 	}
@@ -562,14 +602,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 		if ($contact_id == '') return false;
 		$url = 'contacts/'.$contact_id.'/address/'.$address_id;
 		$response = $this->put_books ($url, $address);
-		if (!is_array($response)) return false;
-		
-		$zoho_data = json_decode($response['body'], true);
-		//bbz_debug (array ($url, $zoho_data), 'Zoho PUT result');
-		if (isset ($zoho_data['address_info'])) {
-			return $zoho_data['address_info'];
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zc-022', 'Zoho update_address failed', array(
+				'contact_id'=>$contact_id,
+				'address'=>$address,
+				'address_id'=>$address_id));
+			return $response;
+		}
+		//bbz_debug ($zoho_data, 'zoho add address');
+		if (isset ($response['address_info'])) {
+			//success
+			return $response['address_info'];
 		} else {
-			return false;
+			return new WP_Error ('bbz-zc-023', 'Zoho update_address failed', array(
+				'contact_id'=>$contact_id,
+				'address'=>$address,
+				'address_id'=>$address_id,
+				'response'=>$response));
 		}	
 	
 	}	
@@ -580,12 +629,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 * creates a new sales order
 * $order is an array formatted for zoho containing the order.
 * $confirm confirms the order automatically.  If false order is left as draft.
+* 
+* Returns the created salesorder array from zoho or wp_error
 ****/	
 
 	public function create_salesorder ($order, $confirm=false) {
-
-		if (! $this->isconnected() ) return false;
-		
+	
 		if (! is_array($order) ) return false;
 		
 		$request = 'salesorders';
@@ -593,17 +642,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 		
 		
 		$response = $this->post_books ($request, $order);
-		if (!is_array($response)) return false;
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zc-024', 'Zoho create_salesorder failed', array(
+				'order'=>$order));
+			return $response;
+		}
 		
-		$zoho_data = json_decode($response['body'], true);
-		//bbz_debug ($zoho_data, 'create_sales_order result', false);
-		if (isset ($zoho_data['salesorder']['salesorder_id'])) {
-			$this->salesorder_confirm ($zoho_data['salesorder']['salesorder_id']);
-			return $zoho_data['salesorder'];
+		if (isset ($response['salesorder']['salesorder_id'])) {
+			// now confirm the salesorder
+			$confirmed = $this->salesorder_confirm ($response['salesorder']['salesorder_id']);
+			if (is_wp_error ($confirmed) ) {
+				$confirmed->add ('bbz-zc-025', 'Zoho create_salesorder  confirm failed', array(
+					'order'=>$order,
+					'salesorder'=>$response));
+				return $confirmed;
+			}
+			//success!
+			return $response ['salesorder'];
 		} else {
-			return false;
+			return new WP_Error ('bbz-zc-026', 'Zoho create_salesorder failed', array(
+				'order'=>$order,
+				'response'=>$response));
 		}	
-	
 	}	
 	
 	/****
@@ -613,11 +673,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	*****/
 	public function salesorder_confirm ($order_id) {
 
-		if (! $this->isconnected() ) return false;
-		
 		$request = 'salesorders/'.$order_id.'/status/confirmed';
-		return $this->post_books ($request);
-		// bbz_debug ($response, 'Confirmed?');
+		$response = $this->post_books ($request);
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zc-027', 'Zoho salesorder_confirm failed', array(
+				'order_id'=>$order_id));
+		}
+		return $response;
 	}
 	
 	/****
@@ -628,13 +690,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 	
 	public function salesorder_addcomment ($order_id, $comment) {
 
-		if (! $this->isconnected() ) return false;
-		
 		$content = array('description' => $comment);
 		$request = 'salesorders/'.$order_id.'/comments';
 		//bbz_debug (array($request, $comment), 'Add Comment', false);
-		return $this->post_books ($request, $content);
+		$response = $this->post_books ($request, $content);
 		// bbz_debug ($response, 'Confirmed?');
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zc-028', 'Zoho salesorder_addcomment failed', array(
+				'order_id'=>$order_id,
+				'comment'=>$comment));
+		}
+		return $response;
+
 	}
 
 /*****
@@ -643,29 +710,40 @@ if ( ! defined( 'ABSPATH' ) ) {
 * creates a new invoice
 * $invoice is an array formatted for zoho containing the invoice.
 * $confirm confirms the invoice automatically.  If false, invoice is left as draft.
+
+* Returns the zoho invoice array or wp_error
 ****/	
 
 	public function create_invoice ($invoice, $confirm=false) {
 
-		if (! $this->isconnected() ) return false;
-		
-		if (! is_array($invoice) ) return false;
-		
 		$request = 'invoices';
 		if (isset ($invoice['invoice_number'])) $request .= '?ignore_auto_number_generation=true'; 
 		
 		$response = $this->post_books ($request, $invoice);
-		if (!is_array($response)) return false;
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zc-029', 'Zoho create_invoice failed', array(
+				'invoice'=>$invoice));
+		}
 		
-		$zoho_data = json_decode($response['body'], true);
 		//bbz_debug ($zoho_data, 'create_sales_order result', false);
 		
-		if (isset ($zoho_data['invoice']['invoice_id'])) {
-			$this->invoice_confirm ($zoho_data['invoice']['invoice_id']);
-			return $zoho_data['invoice'];
+		if (isset ($response['invoice']['invoice_id'])) {
+			//now confirm the invoice
+			$confirmed = $this->invoice_confirm ($response['invoice']['invoice_id']);
+			if (is_wp_error ($confirmed) ) {
+				$confirmed->add ('bbz-zc-030', 'Zoho create_invoice confirm failed', array(
+					'invoice'=>$invoice,
+					'zoho data'=>$response));
+				return $confirmed;
+			}
+			// success!
+			return $response['invoice'];
 		} else {
-			return false;
+			return new WP_Error ('bbz-zc-031', 'Zoho create_invoice failed', array(
+				'invoice'=>$invoice,
+				'response'=>$response));
 		}
+
 	}
 	/****
 	* invoice_confirm
@@ -677,8 +755,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 		if (! $this->isconnected() ) return false;
 		
 		$request = 'invoices/'.$invoice_id.'/status/sent';
-		return $this->post_books ($request);
-		// bbz_debug ($response, 'Confirmed?');
+		$response = $this->post_books ($request);
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zc-032', 'Zoho invoice_confirm failed', array(
+				'invoice_id'=>$invoice_id));
+		}
+		return $response;
 	}
 	
 	/****
@@ -688,19 +770,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 	****/
 	public function create_payment ($payment) {
 
-		if (! $this->isconnected() ) return false;
-		
-		if (! is_array($payment) ) return false;
-		
 		$request = 'customerpayments';
 		
 		$response = $this->post_books ($request, $payment);
-		if (!is_array($response)) return false;
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zc-033', 'Zoho create_payment failed', array(
+				'payment'=>$payment));
+			return $response;
+		}
 		
-		$zoho_data = json_decode($response['body'], true);
 		//bbz_debug (array($payment, $zoho_data), 'create_payment result', false);
-		
-		return $zoho_data;
+		if (isset ($response['payment'])) {
+			return $response['payment'];
+		} else {
+			return new WP_Error ('bbz-zc-034', 'Zoho create_payment failed', array(
+				'payment'=>$payment,
+				'response'=>$response));
+		}
 	}
 
 	

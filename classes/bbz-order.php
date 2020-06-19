@@ -91,8 +91,14 @@ class bbz_order {
 	function __construct () {
 	}
 	
-	public function process_new_order ($order_id) {
+	public function process_new_order ($order_id, $resubmit=false) {
 		$order = new WC_Order( $order_id );	
+		
+		// check that order hasn't already been sent - can be called twice if user refreshes page
+		if (!$resubmit && !empty($order->get_meta ('zoho_order_id', true))) {
+			return new WP_Error ('bbz-ord-101', 'Order has already been submitted to Zoho', array ('order id'=>$order_id));
+		}
+		
 		$options = new bbz_options ();
 		
 		// First identify the type of user
@@ -100,64 +106,68 @@ class bbz_order {
 		//bbz_debug ($user_id, "User ID", false);
 		if (empty($user_id)) { //guest
 			$zoho_cust_id = false;
-			$payment_terms = array (
-				'name' => 'Pay with order',
-				'days' => '0'
-			);
-		
 		} else {
+			//user registered, but may not have zoho account
 			$user_meta = new bbz_usermeta ($user_id);
-			$zoho_cust_id = $user_meta->get_zoho_id();
-			$payment_terms = $user_meta->get_payment_terms();
-			
-			//$user_type = 'registered';  //but may not have a zoho id if no zoho account
+			$zoho_cust_id = $user_meta->get_zoho_id();  //null if no zoho account, treat as guest
+			// FUTURE: create a new customer in zoho for registered user
 		}
 		//bbz_debug ($zoho_cust_id, "Zoho Cust ID", false);
 		
 		// Get the address id
 		$bbz_addresses = new bbz_addresses ($user_id);
 		$shipto = $order->get_address ('shipping');
-		if ($zoho_cust_id === false) {  
-			// logged in user without zoho id - treat as guest
+		if (empty($zoho_cust_id) ){  
+			// treat logged in user without zoho id as guest
 			$zoho_cust_id = $options->get ('guestuserid');
-			//bbz_debug ($zoho_cust_id, "Zoho Cust ID", false);
-
-			if ($zoho_cust_id === false) {
-				$this->notify_admin ('No guest customer linked', $order);
-				return false; // no guest customer linked - can't process order
+			if (empty($zoho_cust_id)) {
+				$error = new WP_Error ('bbz-ord-001', 'No guest customer linked');
+				$this->notify_admin ($order, $error);
+				return $error; // no guest customer linked - can't process order
 			}
-			//$user_type = 'guest';
+			$payment_terms = array (
+				'name' => 'Pay with order',
+				'days' => '0'
+			);
+			//bbz_debug ($zoho_cust_id, "Zoho Cust ID", false);
+			// create new address for guest customer in zoho
 			$zoho_address_id = $bbz_addresses->get_zoho_address_id ($shipto, 'shipping', $zoho_cust_id); // specifying cust id overrides default
 		} else {
+			$payment_terms = $user_meta->get_payment_terms();		
 			$zoho_address_id = $bbz_addresses->get_zoho_address_id ($shipto, 'shipping');
-			if (empty ($zoho_address_id)) {
+			if (is_wp_error ($zoho_address_id)) {
 				// check in case the order's using the billing address
 				$zoho_address_id = $bbz_addresses->get_zoho_address_id ($shipto, 'billing');
-				if (empty ($zoho_address_id)) {
-					// and if that failed, we'll create a new address
+				if (is_wp_error ($zoho_address_id)) {
+					// and if that failed, we'll create a new address, although should already have been created by thwma
 					$zoho_address_id = $bbz_addresses->get_zoho_address_id ($shipto, 'shipping', $zoho_cust_id);
 				}
 			}
 		}
 		// if unable to get address id, can't create order.  Can we email admin?
-		if (empty ($zoho_address_id)) {
-			$message = 'Unable to get Zoho address id\nShip To: '.print_r($shipto,true).
-				'\nbbz_addresses '.print_r($bbz_addresses, true);
-			$this->notify_admin ($message, $order);
-			return false;
+		if (is_wp_error ($zoho_address_id)) {
+			$error = $zoho_address_id->add('bbz-ord-002', 'Unable to get Zoho address id', array (
+				'shipto'=> $shipto,
+				'bbz_addresses'=>$bbz_addresses));
+			$this->notify_admin ($order, $error);
+			return $error;
 		}
 		
-		$zoho_order = $this->create_zoho_order ($zoho_cust_id, $zoho_address_id, $payment_terms, $order);
-		if (!is_array($zoho_order) ) {
-			$message = 'Unable to create Zoho order\n'.
-				'Zoho Customer ID '.$zoho_cust_id.'\n'.
-				'Zoho Address ID '.$zoho_address_id.'\n';
-			$this->notify_admin ($message, $order);
-			return false;
+		$response = $this->create_zoho_order ($zoho_cust_id, $zoho_address_id, $payment_terms, $order);
+		if (is_wp_error($response) ) {
+			$response->add ('bbz-ord-003', 'Unable to create Zoho order', array(
+				"Zoho Customer ID"=>$zoho_cust_id,
+				"Zoho Address ID"=>$zoho_address_id));
+			$this->notify_admin ($order, $response);
+			return $response;
 		}
-		
+		$zoho_order = $response;
 		$zoho_order_id = $zoho_order['salesorder_id'];
 		//bbz_debug ($zoho_order, 'Order created', false);
+		//update_post_meta ($order->get_order_number(), 'zoho_order_id', $zoho_order_id);
+		
+		$order->add_meta_data ('zoho_order_id', $zoho_order_id);
+		$order->save();
 		
 		// if order is paid (excluding on account), create an invoice and payment record.
 		$zoho = new zoho_connector;		
@@ -169,13 +179,25 @@ class bbz_order {
 			$zoho->salesorder_confirm ($zoho_order_id);
 			
 			// create an invoice and payment record.
-			$zoho_invoice = $this->create_zoho_invoice ($zoho_order, $order);
+			$response = $this->create_zoho_invoice ($zoho_order, $order);
 			//bbz_debug ($zoho_invoice, 'Invoice created', false);
-			
-			if (is_array($zoho_invoice)) {
-				$zoho_payment = $this->create_zoho_payment ($zoho_invoice, $order);
-				//bbz_debug ($zoho_payment, 'Payment created');
+			if (is_wp_error ($response) ) {
+				$response->add ('bbz-ord-004', 'Unable to create Zoho invoice', array(
+					"Zoho Order"=>$zoho_order));
+				$this->notify_admin ($order, $response);
+				return $response;
 			}
+			$zoho_invoice = $response;
+			$response = $this->create_zoho_payment ($zoho_invoice, $order);
+			if (is_wp_error ($response) ) {
+				$response->add ('bbz-ord-005', 'Unable to create Zoho payment', array(
+					"Zoho invoice"=>$zoho_invoice));
+				$this->notify_admin ($order, $response);
+				return $response;
+			}
+
+				//bbz_debug ($zoho_payment, 'Payment created');
+
 		} else {
 			// if user is wholesale customer confirm anyway
 			if (bbz_is_wholesale_customer ($user_id)) {
@@ -225,10 +247,7 @@ class bbz_order {
 		};
 		//bbz_debug ($zoho_order, 'Order array before sending', false);
 		$zoho = new zoho_connector;
-		$zoho_order = $zoho->create_salesorder ($zoho_order);
-		$zoho_order_id = $zoho_order['salesorder_id'];
-		$order->add_meta_data ('zoho_order_id', $zoho_order_id);
-		return $zoho_order;
+		return $zoho->create_salesorder ($zoho_order);
 
 	}
 	
@@ -277,8 +296,9 @@ class bbz_order {
 		//bbz_debug ($zoho_invoice, 'Invoice array before sending', false);
 		$zoho = new zoho_connector;
 		$zoho_invoice = $zoho->create_invoice ($zoho_invoice, $confirm=true);
-		$zoho_invoice_id = $zoho_order['invoice_id'];
-		$order->add_meta_data ('zoho_invoice_id', $zoho_invoice_id);
+		if (!is_wp_error ($zoho_invoice)) {
+			$order->add_meta_data ('zoho_invoice_id', $zoho_order['invoice_id']);
+		}
 		return $zoho_invoice;
 
 	}
@@ -307,13 +327,23 @@ class bbz_order {
 		
 		$zoho = new zoho_connector;
 		$zoho_payment = $zoho->create_payment ($zoho_payment);
-		$order->add_meta_data ('zoho_payment_id', $zoho_payment ['payment_id']);
+		if (!is_wp_error ($zoho_payment)) {
+			$order->add_meta_data ('zoho_payment_id', $zoho_payment ['payment_id']);
+		}
 		return $zoho_payment;
 	}
 	
-	private function notify_admin ($message, $order) {
-		$subject = 'Failed to create Zoho order #'.$order->get_order_number();
-		$message .= '\nOrder Data\n'.print_r ($order->get_data(), true);
+	private function notify_admin ($order, $error) {
+		$subject = "Failed to create Zoho order #".$order->get_order_number();
+		$message = "Website order failed to load in Zoho.  Error details follow:\n";
+		if (is_wp_error ($error) ) {
+			$codes = $error->get_error_codes();
+			foreach ($codes as $error_code) {
+				$message .= 'Error: '.$error_code.' -> '.$error->get_error_message ($error_code)."\n";
+				$message .= 'Error data: <pre>'.print_r ($error->get_error_data ($error_code), true)."</pre>\n";
+			}
+		}	
+		$message .= "\nOrder Data\n<pre>".print_r ($order->get_data(), true).'</pre>';
 		bbz_email_admin ($subject, $message);
 	}
 		

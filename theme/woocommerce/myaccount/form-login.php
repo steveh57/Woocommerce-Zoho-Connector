@@ -1,6 +1,7 @@
 <?php
 /**
  * Bittern Login Form
+ * 1/6/20 Version bumped to 4.1.0 SH
  *
  * Replaces standard template from woocommerce/templates/myaccount/form-login.php
  * Save to BitternBooks/woocommerce/myaccount/form-login.php.
@@ -15,7 +16,7 @@
  *
  * @see     https://docs.woocommerce.com/document/template-structure/
  * @package WooCommerce/Templates
- * @version 3.6.0
+ * @version 4.1.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

@@ -1,0 +1,316 @@
+/* Avada Theme Custom CSS
+ * Cut and paste this to the Avada Theme Options Custom CSS
+ */
+
+#main a{
+    text-decoration: underline;
+}
+
+#main .product-title a, #main .cat-item a, #main .description_tab a, #main a.fusion-button, 
+#main .flex-direction-nav a, #main .product-grid-view a {
+    text-decoration: none;
+}
+
+.fusion-logo a img{
+    max-height: 80px !important;
+}
+
+.fusion-footer-widget-area .widget-title{
+    text-transform: none !important;
+}
+
+.fusion-woo-product-design-clean .products .product-title, .fusion-woo-product-design-clean .slides .product-title{
+    font-style: normal !important;
+}
+
+h2.fusion-carousel-title, h3.fusion-carousel-title, h4.fusion-carousel-title, 
+h5.fusion-carousel-title, .woocommerce-container .product-title, code{
+    font-family: Karla, Arial, Helvetica, sans-serif;
+}
+
+.woocommerce-container .product-title, .woocommerce .product-title{
+    font-size: 16px !important;
+}
+
+.fusion-content-widget-area .widget_layered_nav li.chosen{
+    background-color: transparent !important;
+}
+
+.woocommerce .checkout h3, .woocommerce h2.promo-code-heading, .woocommerce .woocommerce-cart-form h2, .woocommerce .cart-collaterals h2{
+    font-size: 20px !important;
+}
+/* Fusion post slideshow - limit size */
+.fusion-post-slideshow img {
+    width: auto !important;
+    max-width: 400px !important;
+    max-height: 300px !important;
+}
+
+/* Shop Page add to basket buttons  */
+#main .product-buttons {
+    padding-top: 5px;
+}
+#main .product-buttons .fusion-content-sep {
+    display: none;
+    margin: 5px 0px;
+}
+
+#main .product-buttons a {
+    max-width: none;
+    display: inline;
+    width:100%;
+    margin-bottom: 5px;
+    margin-top: 0px;
+    padding: 5px 5px;
+    letter-spacing: 1px;
+    border-width: 0px;
+    border-style: solid;
+    border-radius: 15px;
+    transition: all .2s;
+    background: #fac689;
+    color: #4c1910;
+    border-color: #ffffff;
+    font-size: 9px;
+    line-height: 11px !important;
+    text-align: center;
+ }
+ 
+.add-to-wishlist-text, .added-to-wishlist-text, .add_to_cart_button, .added_to_cart {
+    font-family: book-antiqua;
+    font-weight: 700;
+    font-style: normal;
+    text-transform: uppercase;
+    text-align:center;
+    font-size: 9px;
+}
+#main .product_buttons a.added { /* doesn't work!*/
+    background: #e4e0db;
+}
+
+/* Product single template */
+.product .entry-summary .product_meta{
+    margin: 0;
+    width: 100%;
+}
+
+.product .entry-summary .product_meta::before{
+    content: "Product Details";
+    font-family: book-antiqua, Arial, Helvetica, sans-serif;
+    font-size: 20px;
+    color: #4c1910;
+}
+
+.product .entry-summary .product_meta, .product .entry-summary .summary-container{
+    padding: 15px 20px;
+    border: 1px solid #eaeaea;
+    border-radius: 5px;
+}
+
+.product .product-border{
+    border: none;
+    margin-top: 0;
+}
+
+@media only screen and (min-width: 1000px){
+    
+    .product .entry-summary .summary-container {
+        width: 60%;
+    }
+
+    .product .entry-summary .product_meta{
+        width: 34.5%;
+        float: right;
+    }
+}
+
+@media only screen and (max-width: 999px){
+    .product .summary.entry-summary{
+        display: flex;
+        flex-wrap: wrap;
+    }
+    
+    .product .summary.entry-summary .summary-container{
+        order: 1;
+        margin-bottom: 20px;
+    }
+    
+    .product .summary.entry-summary .product_meta{
+        order: 2;
+    }
+}
+/* Product single template end */
+
+/* Basket */
+
+.shop_table td{
+    padding: 5px 0;
+}
+
+.shop_table .product-thumbnail{
+    width: 40px;
+}
+
+.shop_table tbody tr{
+    height: auto;
+}
+
+.woocommerce-cart .cart_totals .shop_table .shipping td, .woocommerce-cart .cart_totals .shop_table .shipping th, .woocommerce-cart .cart_totals .shop_table .tax-rate td, .woocommerce-cart .cart_totals .shop_table .tax-rate th {
+    padding-top: 10px;
+}
+
+.cart_totals table td {
+    padding-bottom: 10px;
+}
+
+.cart_totals table td p{
+    margin-bottom: 10px;
+}
+
+.woocommerce-MyAccount-content, .woocommerce-content-box, #customer_login .col-1, #customer_login .col-2, .cart-totals-buttons, .cart_totals, .checkout_coupon, .coupon, .cross-sells, .woocommerce-shipping-calculator{
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.cart_totals table th{
+    padding-bottom: 10px;
+}
+/* Forms - make more compact */
+
+.post-content form p {
+	margin-top: 0;
+	margin-bottom: 5px;
+}
+
+/* My account */
+
+.register-block-link{
+    display: block;
+    font-family: book-antiqua;
+    border-radius: 41px;
+    background-color: #fac689;
+    color: #fff;
+    padding: 26px 23px;
+    line-height: 16px;
+    font-size: 17px;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.register-block-link.alt{
+    background-color: #4C190F;
+}
+
+.register-block-link.alt:hover{
+    color: #fac689;
+}
+/* Wholesale Lead Capture plugin */
+#wwlc-register{
+    font-family: book-antiqua;
+    font-weight: 700;
+    font-style: normal;
+    letter-spacing: 1px;
+    border-width: 0px;
+    border-style: solid;
+    border-radius: 25px;
+    text-transform: none;
+    -webkit-transition: all .2s;
+    transition: all .2s;
+    background: #fac689;
+    color: #ffffff;
+    border-color: #ffffff;
+    padding: 11px 23px;
+    line-height: 16px;
+    font-size: 16px;
+}
+#wwlc-register.button {
+    background: #fac689;
+    color: #4C190F;
+}
+#wwlc-register.button:hover {
+    background: #4C190F;
+    color: #ffffff;
+}
+/* Wholesale Order Form plugin */
+
+#wwof_product_listing_table > tbody > tr:nth-child(even){
+    background-color: #efefed;
+}
+
+#wwof_product_listing_table tbody tr td {
+    vertical-align: top;
+    padding-top: 8px;
+    padding-right: 10px;
+}
+
+#wwof_product_listing_table tbody tr td input[type="number"]{
+    background-color: #fff;
+}
+
+#wwof_product_search_btn, #wwof_product_displayall_btn, .woocommerce_pdf_catalog_button {
+    font-family: book-antiqua;
+    font-weight: 700;
+    font-style: normal;
+    letter-spacing: 1px;
+    border-width: 0px;
+    border-style: solid;
+    border-radius: 25px;
+    text-transform: none;
+    -webkit-transition: all .2s;
+    transition: all .2s;
+    background: #fac689;
+    color: #4c1910;
+    border-color: #ffffff;
+    padding: 10px 22px;
+    line-height: 17px;
+    font-size: 14px;
+}
+
+.woocommerce-pdf-catalog.link-wrapper {
+    margin : 20px 20px;
+}
+
+ #wwof_product_displayall_btn{
+     background-color: #efefed;
+ }
+ 
+ #wwof_product_search_btn:hover, #wwof_product_displayall_btn:hover, .woocommerce_pdf_catalog_button:hover {
+     background-color: #4c1910;
+     color: #fff;
+ }
+ 
+ .qty-based-discount-table-description{
+     border: 1px solid #4c1910;
+     padding: 5px 15px;
+     color: #4c1910;
+ }
+ 
+ .qty-based-discount-table-description p.desc{
+     margin: 0 !important;
+ }
+ 
+ #wwof_product_listing_table th{
+     font-family: Karla, Arial, Helvetica, sans-serif;
+     font-weight: 700;
+     text-align: left;
+ }
+ 
+  .order-quantity-based-wholesale-pricing-view{
+      margin: 20px 0 10px;
+  }
+ 
+ .order-quantity-based-wholesale-pricing-view tr th,  .order-quantity-based-wholesale-pricing-view tr td{
+     padding: 2px 10px 2px 0 !important;
+ }
+ 
+ /* User Banner - defined in bb zoho connector */
+ 
+ .bbz-user-banner {
+    background-color: #fac689;
+     font-size: 18px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 10px 0;
+    margin-bottom: 20px;
+    color: #4c1910;
+ }

@@ -227,11 +227,15 @@ class bbz_action_form extends bbz_admin_form {
 					if ( $item['status'] == 'inactive' && !empty ($item ['inactive_reason'] )) {
 						update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['inactive_reason']);
 					}
-
+					$product->set_manage_stock (true) ;  // Ensure stock management enabled
+					if ($product->get_low_stock_amount() == 0) {
+						$product->set_low_stock_amount(3);  //set warning level to 3 if not set
+					}
 				}
+				
 				if ( !empty($sku) && isset ($items[$sku]) && $item['status'] == 'active') {
 					// product is available and can be backordered
-					$product->set_stock ($item['stock']);
+					$product->set_stock_quantity ($item['stock']);
 					$product->set_backorders ('notify');
 					$product->set_catalog_visibility ('visible'); 
 					// but if stock level is zero or wholesale only, restrict to wholesale customers

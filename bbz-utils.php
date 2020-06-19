@@ -147,7 +147,7 @@ function bbz_is_wholesale_customer ($user_id = '') {
 }
 
 function bbz_email_admin ($subject, $message) {
-	//bbz_debug (array ('Subject'=>$subject, 'Message'=>$message), 'Email to Admin');
+	bbz_debug (array ('Subject'=>$subject, 'Message'=>$message), 'Email to Admin');
 	$admin_email = get_option ('admin_email');
 	wp_mail ($admin_email, $subject, $message);
 

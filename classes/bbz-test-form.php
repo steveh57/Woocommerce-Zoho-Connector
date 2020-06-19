@@ -35,7 +35,7 @@ class bbz_test_form extends bbz_admin_form {
 						'get-contact-id'	=> 'Get Zoho contact by id',
 						'get-addresses'		=> 'Get Zoho addresses for customer id',
 						'get-sales-history'	=> 'Get Zoho sales history',
-						'show-order'		=> 'Display woo order data',
+						'show-order'		=> 'Display woo order data (key=order no)',
 						'submit-order'		=> 'Submit order (key=order no) to Zoho',
 						'confirm-order'		=> 'Confirm sales order (key=zoho order id)',
 						'get-user-meta'		=> 'Get user meta (key=user id, val=meta key(optional)',
@@ -184,10 +184,9 @@ class bbz_test_form extends bbz_admin_form {
 
 			case 'submit-order':
 				$order_id = $options['filterkey'];
-				echo 'Processing order ', $order_id;
+				echo 'Processing order ', $order_id, "\n";
 				$order = new bbz_order;
-				$result = $order->process_new_order($order_id);
-				echo 'Result ', $result ? $result : 'failed';
+				$data = $order->process_new_order($order_id);
 				break;
 				
 			case 'confirm-order':
@@ -200,7 +199,7 @@ class bbz_test_form extends bbz_admin_form {
 
 		}
 
-		if (isset($data)){
+		if (!empty($data)){
 			if (is_array($data)) {
 				echo count ($data) . ' items returned.<br>';
 				echo '<pre>'; print_r ($data); echo '</pre>';
