@@ -22,13 +22,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
  
 class bbz_admin_page {
- 
+		
+	protected $options;
 
 	public function init() {
 		//  Add handler for form posts
         add_action( 'admin_post_'.SAVE_ACTION, array( $this, 'save' ) );
 		// Add handler for Oauth return from Zoho to base url for site
 		add_action('init', array( $this, 'save_auth' ) );
+		$this->options = new bbz_options;
     }
 
 	/*******
@@ -42,38 +44,28 @@ class bbz_admin_page {
 	*		info – info message displayed with a blue border
 	*/
 	
-	private function render_admin_notice (&$options, $dismissable=true) {
-		if (isset ( $options['admin_notice']) && //isset ($options ['admin_message']) &&
-			in_array ( $options['admin_notice'], array ('error', 'warning', 'success', 'info'))) {
+	private function render_admin_notice ($dismissable=true) {
+		$admin_notice = $this->options->get_admin_notice();
+		if (!empty ($admin_notice) ) {
 ?>
-	<div class="notice notice-<?php echo $options['admin_notice'].($dismissable ? ' is-dismissible' : ''); ?>" >
-		<p><strong><?php echo $options ['admin_message'] ?></strong></p>
+	<div class="notice notice-<?php echo $admin_notice.($dismissable ? ' is-dismissible' : ''); ?>" >
+		<p><strong><?php echo $this->options->get_admin_message() ?></strong></p>
 	</div>
 <?php
-			unset ( $options['admin_notice'] );
-			unset ( $options['admin_message'] );
+			$this->options->clear_admin_notice();
 			return true;
 		}
 		return false;
 	}
 	
-	private function set_admin_notice (&$options, $msg='message', $type='error') {
-		if ( in_array ( $type, array ('error', 'warning', 'success', 'info'))) {
-			$options ['admin_notice'] = $type;
-			$options ['admin_message'] = $msg;
-
-		}
-	}
- 
      /**
      * This function renders the contents of the page associated with the Submenu
      * that invokes the render method. In the context of this plugin, this is the
      * Submenu class.
      */
     public function render() {
+		$this->options->reload();
 		$zoho_url = '';
-		$options = get_option ( OPTION_NAME);
-		if(!$options || !is_array($options) ) $options =array();
 		
 		if( isset( $_GET[ 'tab' ] ) ) {
 			$active_tab = $_GET[ 'tab' ];
@@ -95,13 +87,13 @@ class bbz_admin_page {
 <?php		
 		
 		// Display message from last action if set.
-		$this->render_admin_notice ($options);
+		$this->render_admin_notice ();
 		
-		if (!isset ($options['redirect_uri'])) $options['redirect_uri'] = site_url();
+		if ( empty ($this->options->get('redirect_uri'))) $this->options->update('redirect_uri', site_url(), true);
 		
 		switch ($active_tab) {
 			case 'setup':
-				if(!isset ($options['refresh_token']) ) {
+				if(empty ($this->options->get('refresh_token') ) ) {
 					$form = new bbz_admin_form ('bbzform-auth');
 				} else {
 					$form = new bbz_admin_form ('bbzform-reset');
@@ -124,12 +116,11 @@ class bbz_admin_page {
 				$form = new bbz_test_form() ;
 				break;
 		}
-		$form->render ($options);
+		$form->render ();
 		
-		$form->display_data ($options);
+		$form->display_data ();
 
-		// save options
-		update_option (OPTION_NAME, $options);
+
 ?>
 	</div>
 <?php
@@ -144,8 +135,7 @@ class bbz_admin_page {
 	public function save() {
 		//echo '<pre>'; print_r ($_POST); echo '</pre>';
 
-		$options = get_option ( OPTION_NAME);
-		if(!$options || !is_array($options) ) $options =array();
+		$this->options->reload;
 		
 		// Process return from one of our forms
 		if (isset( $_POST['form'] )) {
@@ -156,20 +146,19 @@ class bbz_admin_page {
 			}
 
 			if (! $form) {
-				$this->set_admin_notice ($options, 'Invalid form name '.$_POST['form'], 'error');
+				$this->options->set_admin_notice ('Invalid form name '.$_POST['form'], 'error');
 			} else {
 				//echo 'post_data:<pre>'; print_r ($form->post_data()); echo '</pre>';
 				foreach ($form->post_data () as $key => $value) {
 						// If the above are valid, sanitize and save the option.
-					$options[$key] = $value;
+					$this->options->update($key, $value);
 				}
+				$this->options->save();
 			}
 		}
 
-		update_option( OPTION_NAME, $options );
-		
 		// execute form specific actions
-		$form->action ($options);
+		$form->action ();
 				
 		$this->redirect();
     }
@@ -181,18 +170,17 @@ class bbz_admin_page {
 //			print_r ($_REQUEST);
 //			exit();
 			if(isset($_REQUEST['code'])) {
-				$options = get_option(OPTION_NAME);
-				$options['auth_code']=$_REQUEST['code'];
-				update_option(OPTION_NAME, $options);
+				$this->options->reload ();
+				$this->options->update('auth_code', $_REQUEST['code'], true);
 				
 				// now need to get access token and refresh token from Zoho
 				$request_url = ZOHO_AUTH_URL.'token';
 				$request_args = array(
 					'body' => array (
-						'code' => $options['auth_code'],
-						'client_id' => $options['client_id'],
-						'client_secret' => $options['client_secret'],
-						'redirect_uri' => $options ['redirect_uri'],
+						'code' => $this->options->get('auth_code'),
+						'client_id' => $this->options->get('client_id'),
+						'client_secret' => $this->options->get('client_secret'),
+						'redirect_uri' => $this->options->get('redirect_uri'),
 						'grant_type' => 'authorization_code',
 						'scope' => ZOHO_AUTH_SCOPE,
 					)
@@ -210,13 +198,13 @@ class bbz_admin_page {
 						exit();
 					} else {
 						foreach ($content as $key => $value) {
-							$options [$key] = $value;
+							$this->options->update($key, $value);
 						}
 						if (isset ($content['expires_in'])) {
 							// save time at which token expires (in seconds)
-							$options ['token_expires'] = time() + $content['expires_in'] - 10;
+							$this->options->update('token_expires', time() + $content['expires_in'] - 10);
 						}
-						update_option(OPTION_NAME, $options);
+						$this->options->save();
 						
 					}
 				}

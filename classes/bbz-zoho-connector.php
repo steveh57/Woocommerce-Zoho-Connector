@@ -87,7 +87,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 			'headers' => array (
 				'Authorization' => 'Zoho-oauthtoken '.$options ['access_token']
 			),
-			'body'	=> $filter
+			'body'	=> $filter,
+			'timeout' => 30,
 		);
 		$options ['last_request'] = $request_url;
 		update_option (OPTION_NAME, $options);
@@ -107,6 +108,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		$request_args = array(
 			'headers' => array ('Authorization' => 'Zoho-oauthtoken '.$options ['access_token']),
 			'body' => '',
+			'timeout' => 30,
 			);
 		if (!empty ($postdata)) {
 			$request_args ['body'] = 'JSONString='.json_encode ($postdata);
@@ -131,6 +133,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				'Authorization' => 'Zoho-oauthtoken '.$options ['access_token']
 			),
 			'body'	=> 'JSONString='.json_encode ($postdata),
+			'timeout' => 30,
 		);
 		$options ['last_request'] = $request_url;
 		update_option (OPTION_NAME, $options);
@@ -723,6 +726,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		if (is_wp_error ($response)) {
 			$response->add('bbz-zc-029', 'Zoho create_invoice failed', array(
 				'invoice'=>$invoice));
+				return $response;
 		}
 		
 		//bbz_debug ($zoho_data, 'create_sales_order result', false);

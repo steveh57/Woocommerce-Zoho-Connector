@@ -36,8 +36,9 @@ class bbz_test_form extends bbz_admin_form {
 						'get-addresses'		=> 'Get Zoho addresses for customer id',
 						'get-sales-history'	=> 'Get Zoho sales history',
 						'show-order'		=> 'Display woo order data (key=order no)',
-						'submit-order'		=> 'Submit order (key=order no) to Zoho',
+					//	'submit-order'		=> 'Submit order (key=order no) to Zoho',
 						'confirm-order'		=> 'Confirm sales order (key=zoho order id)',
+						'process-orders'	=> 'New process outstanding orders',
 						'get-user-meta'		=> 'Get user meta (key=user id, val=meta key(optional)',
 						'show-options'		=> 'Show bbz option data',
 						'product-filter'	=> 'Test product filter',
@@ -71,18 +72,24 @@ class bbz_test_form extends bbz_admin_form {
 
 
 	function __construct () {
-		$this->form = $this->testform;
+		parent::__construct($this->testform);
+
 	}
 	
-	public function action ($options) {
+	public function action () {
 	}
 
-	public function display_data ($options) {
-		if (!isset($options['function'])) return false;
-		echo '<h2>Results for "'.$options['function'].'"</h2>';
+	public function display_data () {
+		$function = $this->options->get('function');
+		$filterkey = $this->options->get ('filterkey');
+		$filtervalue = $this->options->get ('filtervalue');
+		$filter = array($filterkey=>$filtervalue);
+		
+		if (empty ( $function )) return false;
+		echo '<h2>Results for "'.$function.'"</h2>';
 		$zoho = new zoho_connector;
 		echo '<br>Connection '.( $zoho->connected ? 'successful' : 'failed').'<br>';
-		switch ($options['function']) {
+		switch ($function) {
 
 			case 'get-itemdata':
 				$data = $zoho->get_items();
@@ -98,12 +105,12 @@ class bbz_test_form extends bbz_admin_form {
 				break;
 				
 			case 'call-function':
-				$data = call_user_func ($options ['filterkey'],$options['filtervalue']) ;
+				$data = call_user_func ($filterkey,$this->options->get ('filtervalue')) ;
 				break;			
 			
 			case 'get-product-detail':
-				$product = wc_get_product ($options ['filterkey']);
-				$data = call_user_func (array($product, $options['filtervalue']));
+				$product = wc_get_product ($filterkey);
+				$data = call_user_func (array($product, $filtervalue));
 				break;
 				
 			case 'get-emails';
@@ -115,15 +122,15 @@ class bbz_test_form extends bbz_admin_form {
 				break;
 				
 			case 'get-contact':
-				$data = $zoho->get_contact_by_email($options['filtervalue']);
+				$data = $zoho->get_contact_by_email($filtervalue);
 				break;
 				
 			case 'get-contact-id':
-				$data = $zoho->get_contact_by_id ($options['filtervalue']);
+				$data = $zoho->get_contact_by_id ($filtervalue);
 				break;
 				
 			case 'get-addresses':
-				$data = $zoho->get_contact_address($options['filtervalue']);
+				$data = $zoho->get_contact_address($filtervalue);
 				break;
 
 			case 'get-sales-history':
@@ -132,25 +139,21 @@ class bbz_test_form extends bbz_admin_form {
 				
 			case 'product-filter':
 				$args = array();
-				$args ['post__in'][] = $options['filtervalue'];
+				$args ['post__in'][] = $filtervalue;
 				$data = bbz_wwof_product_filter ($args);
 				break;
 				
 			case 'get-user-meta':
-				$user_id = !empty ($options['filterkey']) ? $options['filterkey'] : wp_get_current_user()->ID;
-				$data = get_user_meta ($user_id, $options['filtervalue']);
+				$user_id = !empty ($filterkey) ? $filterkey : wp_get_current_user()->ID;
+				$data = get_user_meta ($user_id, $filtervalue);
 				break;
 				
 			case 'show-options':
-				$data = $options;
+				$data = $this->options->getall();
 				break;
 				
 			case 'get-dataset':
-				$filter = array();
-				if (isset ($options['filterkey'])) {
-					$filter = array ($options['filterkey']=>$options['filtervalue']);
-				} 
-				$response = $zoho->get_books ($options['dataset'], $filter);
+				$response = $zoho->get_books ($this->options->get('dataset'), $filter);
 				if (is_array($response)) {
 					echo 'Headers: <pre>'; print_r ($response['headers']); echo '</pre>';
 					echo 'Body: <pre>'; print_r (json_decode ($response['body'], true)); echo '</pre>';
@@ -161,11 +164,7 @@ class bbz_test_form extends bbz_admin_form {
 				break;
 				
 			case 'get-analytics':
-				$filter = array();
-				if (isset ($options['filterkey'])) {
-					$filter = array ($options['filterkey']=>$options['filtervalue']);
-				} 
-				$response = $zoho->get_analytics ($options['dataset'], $filter);
+				$response = $zoho->get_analytics ($this->options->get('dataset'), $filter);
 				if (is_array($response)) {
 //						echo 'Response: <pre>'; print_r ($response); echo '</pre>';
 					echo 'Headers: <pre>'; print_r ($response['headers']); echo '</pre>';
@@ -177,20 +176,17 @@ class bbz_test_form extends bbz_admin_form {
 				break;
 			
 			case 'show-order':
-				$order_id = $options['filterkey'];
+				$order_id = $filterkey;
 				$data = wc_get_order($order_id);// ($order_id);
 				//$data = array ($order_id=>$order->get_data());
 				break;
-
-			case 'submit-order':
-				$order_id = $options['filterkey'];
-				echo 'Processing order ', $order_id, "\n";
-				$order = new bbz_order;
-				$data = $order->process_new_order($order_id);
+			
+			case 'process-orders':
+				$data = bbz_process_orders ($resubmit=$filtervalue);
 				break;
-				
+
 			case 'confirm-order':
-				$order_id = $options['filterkey'];
+				$order_id = $filterkey;
 				echo 'Processing order ', $order_id;
 				$zoho = new zoho_connector;
 				$result = $zoho->confirm_salesorder($order_id);
@@ -209,9 +205,7 @@ class bbz_test_form extends bbz_admin_form {
 		} else {
 			echo '<br>No data returned';
 		}
-		unset ($options['function']);
-		update_option ( OPTION_NAME, $options);
-		
+		$this->options->delete ('function', true);
 		
 	}
 

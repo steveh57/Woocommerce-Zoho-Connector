@@ -148,6 +148,7 @@ class bbz_admin_form {
 
 	);
 	
+	protected $options;
 
 	private function attribute_list () {
 		$attributes = wc_get_attribute_taxonomies();
@@ -167,6 +168,7 @@ class bbz_admin_form {
 		
 			$this->form = $this->form_definitions [ $form];
 		}
+		$this->options = new bbz_options();
 	}
 
      /**
@@ -382,10 +384,12 @@ class bbz_admin_form {
 	* Calls action function for the current form to process results
 	*
 	*****/
-	public function action ($options) {
+	public function action () {
+	
+		$this->options->reload();
 		
 		if ( isset( $this->form['action'] ) ) {
-			call_user_func (array ($this, $this->form['action']), $options);
+			call_user_func (array ($this, $this->form['action']));
 		}
 	}
 	/***
@@ -394,27 +398,19 @@ class bbz_admin_form {
 	* Calls display_data function for the current form to display results
 	*
 	*****/
-	public function display_data ($options) {
+	public function display_data () {
 		
 		if ( isset( $this->form['display_data'] ) ) {
-			call_user_func (array ($this, $this->form['display_data']), $options);
+			call_user_func (array ($this, $this->form['display_data']));
 		}
 	}
 
-	
-	protected function set_admin_notice (&$options, $msg='message', $type='error') {
-		if ( in_array ( $type, array ('error', 'warning', 'success', 'info'))) {
-			$options ['admin_notice'] = $type;
-			$options ['admin_message'] = $msg;
-
-		}
-	}
  
 	/*****
 	* Form specific action functions
 	*
 	*****/
-	private function auth_action ($options) {
+	private function auth_action () {
 
 		// Go to Zoho for to get first authorisation code
 		$auth_url = ZOHO_AUTH_URL.'auth';
@@ -422,9 +418,9 @@ class bbz_admin_form {
 			'scope' => ZOHO_AUTH_SCOPE,
 			'prompt' => 'consent',		//forces login screen and necessary to get refresh token
 			'access_type' => 'offline', //necessary to get refresh token
-			'client_id' => $options['client_id'],
+			'client_id' => $this->options->get('client_id'),
 			'response_type' => 'code',
-			'redirect_uri' => $options ['redirect_uri'],
+			'redirect_uri' => $this->options->get('redirect_uri'),
 			'state' => 'bbzauth2'
 		);
 
@@ -432,8 +428,8 @@ class bbz_admin_form {
 		exit();
 	}
 	
-	private function reset_action ($options) {
-		update_option(OPTION_NAME, array());
+	private function reset_action () {
+		$this->options->reset();
 	}
 	
 	private function short_desc_action ($options) {

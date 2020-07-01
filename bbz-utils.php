@@ -29,18 +29,28 @@ function bbz_link_user ($user_id='', $zoho_id='') {  //$user is wp user object
 	} else {
 		$zoho_contact = $zoho->get_contact_by_id ( $zoho_id);
 	}
-
-	if (is_array ($zoho_contact) ) {
+	
+	if (is_wp_error ($zoho_contact) ){
+		$zoho_contact->add ('bbz-ut-001', 'In bbz_link_user', array (
+			'user_id'=>$user_id,
+			'$zoho_id'=>$zoho_id) );
+		return $zoho_contact;
+	} else {
 	// Match found
 		$user_meta = new bbz_usermeta ($user_id);
 		
 		$result = $user_meta->load_zoho_id ($zoho_contact);
 		
 		$bbz_addresses = new bbz_addresses ($user_id);
-		if ($result) $result = $bbz_addresses->load_from_zoho_contact ( $zoho_contact);
-		if ($result) $result = $user_meta->load_payment_terms ( $zoho_contact);
+		if (!is_wp_error($result)) $result = $bbz_addresses->load_from_zoho_contact ( $zoho_contact);
+		if (!is_wp_error($result)) $result = $user_meta->load_payment_terms ( $zoho_contact);
 		// Now load sales history from zoho
-		if ($result) $result = bbz_load_sales_history ($user_id);
+		if (!is_wp_error($result)) $result = bbz_load_sales_history ($user_id);
+		if (is_wp_error ($result)) {
+			$result->add ('bbz-ut-002', 'In bbz_link_user', array (
+				'user_id'=>$user_id,
+				'$zoho_id'=>$zoho_id) );
+		}
 
 		return $result;
 	}
@@ -102,6 +112,118 @@ function bbz_update_payment_terms ( $arg='') {
 		}
 	}
 	return $update_count;
+}
+/*******
+*
+* Update products from Zoho
+*
+* Fetches product data from Zoho and uses it to update product pricing and availability,
+* tax class and shipping class if specified in zoho.
+*
+* Note that this overrides various product settings in woocommerce with data from Zoho
+* - Price
+* - Sale Price (if ORP set in Zoho)
+* - Wholesale price
+* - Tax Class
+* - Tax Status
+* - Shipping class (if set in Zoho)
+* - Stock level
+* - Backorder setting
+* - Catalog visibility
+* - Wholesale visibility
+* 
+*******/
+function bbz_update_products () {
+	$tax_class_map = array (
+		'Standard Rate'	=> '',
+		'Reduced Rate'	=> 'reduced-rate',
+		'Zero Rate'		=> 'zero-rate'
+	);
+
+	// Buiid shipping map name=>id
+	$shipping= new WC_shipping();
+	$shipping_map = array();
+	foreach ($shipping->get_shipping_classes() as $shipping_class) {
+		$shipping_map [$shipping_class->name] = $shipping_class->term_id;
+	}
+	
+	// get zoho item data
+	$zoho = new zoho_connector;
+	$items = $zoho->get_items();
+	if (is_array($items)) {
+	
+		// get list of product posts
+		$args = array (
+			'post_type' => 'product',	// only get product posts
+			'numberposts' => -1,		// get all of them
+		);
+		$product_posts = get_posts ( $args);
+		
+		$update_count = 0;
+		foreach ( $product_posts as $post ) {  // for each woo product
+			$product = wc_get_product ($post);
+			$sku = $product->get_sku();
+			if ( !empty($sku) && isset ($items[$sku]) ) {	// have we got zoho data for this sku?
+				$item = $items[$sku];
+				//$items [ $sku ]['pid'] = $product->ID;
+
+				$post_id = $post->ID;
+				update_post_meta ($post_id, 'wholesale_customer_wholesale_price', $item['wsp']);
+				update_post_meta ($post_id, 'wholesale_customer_have_wholesale_price', 'yes');
+				update_post_meta ($post_id, BBZ_PM_ZOHO_ID, $item['zoho_id']);
+
+				$product->set_price ($item['rrp']);  //set active price
+				if (!empty ($item['orp']) && $item['orp'] >= $item['rrp']) { 
+					// if an original price is set, (and greater than RRP) set RRP as sale price
+					$product->set_regular_price ($item['orp']);
+					$product->set_sale_price ($item['rrp']);
+				} else {
+					$product->set_regular_price ($item['rrp']);
+				}
+				if (!empty ($item['tax_class']) && isset ($tax_class_map[$item['tax_class']]) ) {
+					$product->set_tax_class ($tax_class_map[$item['tax_class']]);
+					$product->set_tax_status ('taxable');
+				}
+				if (!empty ($item['shipping_class']) && isset ($shipping_map[$item['shipping_class']]) ) {
+					$product->set_shipping_class_id ($shipping_map[$item['shipping_class']]);
+				}
+				if ( $item['status'] == 'inactive' && !empty ($item ['inactive_reason'] )) {
+					update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['inactive_reason']);
+				}
+				$product->set_manage_stock (true) ;  // Ensure stock management enabled
+				if ($product->get_low_stock_amount() == 0) {
+					$product->set_low_stock_amount(3);  //set warning level to 3 if not set
+				}
+			}
+			
+			if ( !empty($sku) && isset ($items[$sku]) && $item['status'] == 'active') {
+				// product is available and can be backordered
+				$product->set_stock_quantity ($item['stock']);
+				$product->set_backorders ('notify');
+				$product->set_catalog_visibility ('visible'); 
+				// but if stock level is zero or wholesale only, restrict to wholesale customers
+				if ($item['stock'] == 0 || $item['wholesale_only'] == 'Yes') {
+					update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
+				} else {
+					update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'all');
+				}
+			} else {  //product is inactive or not listed on zoho (not available)
+				$product->set_stock (0);
+				$product->set_backorders ('no');
+				$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
+				update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
+
+			}
+			$product->save();
+			$update_count += 1; 
+		}	
+		wc_update_product_lookup_tables();  // update cache
+		wc_delete_product_transients();
+		return $update_count;
+//			echo '<pre>'; print_r ($items); echo '</pre>';
+	} else {
+		return false;
+	}
 }
 
 

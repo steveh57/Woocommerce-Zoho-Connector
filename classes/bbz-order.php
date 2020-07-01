@@ -86,23 +86,46 @@ class bbz_order {
 	
 	private $bbz_addresses = array ();
 	private $user_meta;
+	private $order;
 	
 	
-	function __construct () {
+	function __construct ($order) {
+		$this->order = wc_get_order( $order );
+		if (empty($this->order) ) {
+			return false;
+		}
 	}
 	
-	public function process_new_order ($order_id, $resubmit=false) {
-		$order = new WC_Order( $order_id );	
+	public function get_zoho_order_id () {
+		return $this->order->get_meta ('zoho_order_id', true);
+	}
+		
+		
+	
+	/******
+	* process_new_order
+	*
+	* @param bool $resubmit Send order even if it already has a zoho id
+	* @return mixed zoho order array or wc_error object
+	*
+	* Takes a woocommerce order and submits it to zoho.
+	* If the order has been paid, an invoice and payment record are also created.
+	******/
+	
+	public function process_new_order ($resubmit=false) {
+		if (empty($this->order) ) {
+			return new WP_Error ('bbz-ord-100', 'Invalid order parameter passed to process_new_order');
+		}
 		
 		// check that order hasn't already been sent - can be called twice if user refreshes page
-		if (!$resubmit && !empty($order->get_meta ('zoho_order_id', true))) {
-			return new WP_Error ('bbz-ord-101', 'Order has already been submitted to Zoho', array ('order id'=>$order_id));
+		if (!$resubmit && !empty($this->order->get_meta ('zoho_order_id', true))) {
+			return new WP_Error ('bbz-ord-101', 'Order has already been submitted to Zoho', array ('order'=>$this->order));
 		}
 		
 		$options = new bbz_options ();
 		
 		// First identify the type of user
-		$user_id = $order->get_user_id ();
+		$user_id = $this->order->get_user_id ();
 		//bbz_debug ($user_id, "User ID", false);
 		if (empty($user_id)) { //guest
 			$zoho_cust_id = false;
@@ -116,13 +139,19 @@ class bbz_order {
 		
 		// Get the address id
 		$bbz_addresses = new bbz_addresses ($user_id);
-		$shipto = $order->get_address ('shipping');
+		$shipto = $this->order->get_address ('shipping');
+		/****
+		* May need to look at handling billing addresses:
+		* if payment on account always use default zoho address
+		* if paid by card/paypal use address from woo
+		******/
+		
 		if (empty($zoho_cust_id) ){  
 			// treat logged in user without zoho id as guest
 			$zoho_cust_id = $options->get ('guestuserid');
 			if (empty($zoho_cust_id)) {
 				$error = new WP_Error ('bbz-ord-001', 'No guest customer linked');
-				$this->notify_admin ($order, $error);
+				$this->notify_admin ($error);
 				return $error; // no guest customer linked - can't process order
 			}
 			$payment_terms = array (
@@ -149,50 +178,51 @@ class bbz_order {
 			$error = $zoho_address_id->add('bbz-ord-002', 'Unable to get Zoho address id', array (
 				'shipto'=> $shipto,
 				'bbz_addresses'=>$bbz_addresses));
-			$this->notify_admin ($order, $error);
+			$this->notify_admin ($error);
 			return $error;
 		}
 		
-		$response = $this->create_zoho_order ($zoho_cust_id, $zoho_address_id, $payment_terms, $order);
+		// now create the sales order
+		$response = $this->create_zoho_order ($zoho_cust_id, $zoho_address_id, $payment_terms);
 		if (is_wp_error($response) ) {
 			$response->add ('bbz-ord-003', 'Unable to create Zoho order', array(
 				"Zoho Customer ID"=>$zoho_cust_id,
 				"Zoho Address ID"=>$zoho_address_id));
-			$this->notify_admin ($order, $response);
+			$this->notify_admin ($response);
 			return $response;
 		}
 		$zoho_order = $response;
 		$zoho_order_id = $zoho_order['salesorder_id'];
 		//bbz_debug ($zoho_order, 'Order created', false);
-		//update_post_meta ($order->get_order_number(), 'zoho_order_id', $zoho_order_id);
+		//update_post_meta ($this->order->get_order_number(), 'zoho_order_id', $zoho_order_id);
 		
-		$order->add_meta_data ('zoho_order_id', $zoho_order_id);
-		$order->save();
+		$this->order->add_meta_data ('zoho_order_id', $zoho_order_id);
+		$this->order->save();
 		
 		// if order is paid (excluding on account), create an invoice and payment record.
 		$zoho = new zoho_connector;		
-		if ($order->is_paid() && $order->get_payment_method() !== 'account') {
-			$payment_details = "Paid ".$order->get_date_paid().' '.
-				$order->get_payment_method_title().' '.$order->get_transaction_id();
+		if ($this->order->is_paid() && $this->order->get_payment_method() !== 'account') {
+			$payment_details = "Paid ".$this->order->get_date_paid().' '.
+				$this->order->get_payment_method_title().' '.$this->order->get_transaction_id();
 			$zoho->salesorder_addcomment ($zoho_order_id, $payment_details);
 			//bbz_debug ($result, 'Add Comment', false);
 			$zoho->salesorder_confirm ($zoho_order_id);
 			
 			// create an invoice and payment record.
-			$response = $this->create_zoho_invoice ($zoho_order, $order);
+			$response = $this->create_zoho_invoice ($zoho_order);
 			//bbz_debug ($zoho_invoice, 'Invoice created', false);
 			if (is_wp_error ($response) ) {
 				$response->add ('bbz-ord-004', 'Unable to create Zoho invoice', array(
 					"Zoho Order"=>$zoho_order));
-				$this->notify_admin ($order, $response);
+				$this->notify_admin ($response);
 				return $response;
 			}
 			$zoho_invoice = $response;
-			$response = $this->create_zoho_payment ($zoho_invoice, $order);
+			$response = $this->create_zoho_payment ($zoho_invoice);
 			if (is_wp_error ($response) ) {
 				$response->add ('bbz-ord-005', 'Unable to create Zoho payment', array(
 					"Zoho invoice"=>$zoho_invoice));
-				$this->notify_admin ($order, $response);
+				$this->notify_admin ($response);
 				return $response;
 			}
 
@@ -208,21 +238,29 @@ class bbz_order {
 		return $zoho_order;
 	}
 	
-	private function create_zoho_order ($zoho_cust_id, $zoho_address_id, $payment_terms, $order) {
+	/*****
+	* create_zoho_order
+	*
+	* Creates the sales order in zoho
+	*
+	******/
+	
+	private function create_zoho_order ($zoho_cust_id, $zoho_address_id, $payment_terms) {
 		$zoho_order = array();
 		$zoho_order ['customer_id'] = $zoho_cust_id;
 		$zoho_order ['shipping_address_id'] = $zoho_address_id;
-		$zoho_order ['salesorder_number'] = ZOHO_SALESORDER_PREFIX.$order->get_order_number();
-		$zoho_order ['reference_number'] = $order->get_shipping_last_name();
+		$zoho_order ['salesorder_number'] = ZOHO_SALESORDER_PREFIX.$this->order->get_order_number();
+		$zoho_order ['reference_number'] = $this->order->get_shipping_last_name();
 		$zoho_order ['custom_fields'][] = array (
 				'customfield_id'	=> '1504573000002888095', // Order source
 				'value'				=> 'Website',
 			);
-		$zoho_order ['shipping_charge'] = $order->get_shipping_total();
-		$zoho_order ['discount'] = $order->get_discount_total();
+		$zoho_order ['shipping_charge'] = $this->order->get_shipping_total();
+		$zoho_order ['discount'] = $this->order->get_discount_total();
 		$zoho_order ['payment_terms_label'] = $payment_terms ['name'];
 		$zoho_order ['payment_terms'] = $payment_terms ['days'];
-		$zoho_order ['notes'] = $order->get_customer_note();
+		$zoho_order ['notes'] = $this->order->get_customer_note();
+		$zoho_order ['delivery_method'] = $this->order->get_shipping_method();
 		if ($zoho_order ['discount'] == 0) unset ($zoho_order ['discount']);
 		if (empty ($zoho_order ['notes']) ) {
 			unset ($zoho_order ['notes']);
@@ -232,7 +270,7 @@ class bbz_order {
 		
 		// Iterate Through Items
 		$total = 0;		
-		foreach ( $order->get_items() as $item_id=>$item ) {
+		foreach ( $this->order->get_items() as $item_id=>$item ) {
 			$zoho_line = array();
 			$zoho_line ['item_id'] = get_post_meta ($item->get_product_id(), BBZ_PM_ZOHO_ID, true);
 			$zoho_line ['quantity'] = $item->get_quantity();
@@ -242,8 +280,8 @@ class bbz_order {
 			}
 			$total += $zoho_line['rate'] * $zoho_line ['quantity'];
 		}
-		if ( $total !== $order->get_subtotal()) {  // account for any rounding errors
-			$zoho_order ['adjustment'] = $order->get_subtotal() - $total;
+		if ( $total !== $this->order->get_subtotal()) {  // account for any rounding errors
+			$zoho_order ['adjustment'] = $this->order->get_subtotal() - $total;
 		};
 		//bbz_debug ($zoho_order, 'Order array before sending', false);
 		$zoho = new zoho_connector;
@@ -251,7 +289,7 @@ class bbz_order {
 
 	}
 	
-	private function create_zoho_invoice ($zoho_order, $order) {
+	private function create_zoho_invoice ($zoho_order) {
 		$salesorder_fields_to_copy = array(
 			'customer_id',
 			'shipping_address_id',
@@ -297,27 +335,27 @@ class bbz_order {
 		$zoho = new zoho_connector;
 		$zoho_invoice = $zoho->create_invoice ($zoho_invoice, $confirm=true);
 		if (!is_wp_error ($zoho_invoice)) {
-			$order->add_meta_data ('zoho_invoice_id', $zoho_order['invoice_id']);
+			$this->order->add_meta_data ('zoho_invoice_id', $zoho_order['invoice_id']);
 		}
 		return $zoho_invoice;
 
 	}
 	
-	private function create_zoho_payment ($zoho_invoice, $order) {
+	private function create_zoho_payment ($zoho_invoice) {
 		$zoho_payment = array();
 		$zoho_payment ['customer_id'] = $zoho_invoice ['customer_id'];
-		$zoho_payment ['amount'] = $order->get_total();
-		$zoho_payment ['date'] = substr ($order->get_date_paid(), 0, 10);
+		$zoho_payment ['amount'] = $this->order->get_total();
+		$zoho_payment ['date'] = substr ($this->order->get_date_paid(), 0, 10);
 		$zoho_payment ['invoices'][] = array(
 			'invoice_id' => $zoho_invoice ['invoice_id'],
-			'amount_applied' => $order->get_total()
+			'amount_applied' => $this->order->get_total()
 		);
-		if (stristr ($order->get_payment_method(), 'paypal')) {
+		if (stristr ($this->order->get_payment_method(), 'paypal')) {
 			$zoho_payment ['payment_mode'] = 'Paypal';
 			$zoho_payment ['account_id'] = ZOHO_PAYPAL_ACCOUNT_ID;
-			$zoho_payment ['bank_charges'] = $order->get_meta ('_paypal_transaction_fee', true);
-			$zoho_payment ['description'] = 'Paid by '.$order->get_meta ('Payer PayPal address', true);
-		} elseif (stristr ($order->get_payment_method(), 'stripe')) {
+			$zoho_payment ['bank_charges'] = $this->order->get_meta ('_paypal_transaction_fee', true);
+			$zoho_payment ['description'] = 'Paid by '.$this->order->get_meta ('Payer PayPal address', true);
+		} elseif (stristr ($this->order->get_payment_method(), 'stripe')) {
 			$zoho_payment ['payment_mode'] = 'Stripe';
 			$zoho_payment ['account_id'] = ZOHO_STRIPE_ACCOUNT_ID;
 		} else return false;
@@ -328,13 +366,19 @@ class bbz_order {
 		$zoho = new zoho_connector;
 		$zoho_payment = $zoho->create_payment ($zoho_payment);
 		if (!is_wp_error ($zoho_payment)) {
-			$order->add_meta_data ('zoho_payment_id', $zoho_payment ['payment_id']);
+			$this->order->add_meta_data ('zoho_payment_id', $zoho_payment ['payment_id']);
 		}
 		return $zoho_payment;
+		
 	}
 	
-	private function notify_admin ($order, $error) {
-		$subject = "Failed to create Zoho order #".$order->get_order_number();
+	public function update_order_status () {
+		// get zoho status for order
+		// if shipped, change woo order status to completed
+	}
+	
+	private function notify_admin ($error) {
+		$subject = "Failed to create Zoho order #".$this->order->get_order_number();
 		$message = "Website order failed to load in Zoho.  Error details follow:\n";
 		if (is_wp_error ($error) ) {
 			$codes = $error->get_error_codes();
@@ -343,7 +387,7 @@ class bbz_order {
 				$message .= 'Error data: <pre>'.print_r ($error->get_error_data ($error_code), true)."</pre>\n";
 			}
 		}	
-		$message .= "\nOrder Data\n<pre>".print_r ($order->get_data(), true).'</pre>';
+		$message .= "\nOrder Data\n<pre>".print_r ($this->order->get_data(), true).'</pre>';
 		bbz_email_admin ($subject, $message);
 	}
 		

@@ -39,7 +39,7 @@ class bbz_linkuser_form extends bbz_admin_form {
 	);
 	
 	function __construct () {
-		$this->form = $this->linkuserform;
+		parent::__construct($this->linkuserform);
 	}
 	
 	public function zoho_user_list () {
@@ -55,35 +55,34 @@ class bbz_linkuser_form extends bbz_admin_form {
 		}
 		return $results;
 	}
-	public function action ($options) {
-		$webuser = $options['webuser'];  // wordpress user id
-		$zohouser = $options['zohouser']; //zoho user id
+	public function action () {
+		$this->options->reload();
+		$webuser = $this->options->get('webuser');  // wordpress user id
+		$zohouser = $this->options->get('zohouser'); //zoho user id
 		
 		if ($webuser == 0) { // Guest user selected
-			$options['guestuserid'] = $zohouser;
+			$this->options->update('guestuserid', $zohouser);
 			$result = true;
 		} else {
 			$result = bbz_link_user ($webuser, $zohouser);
 		}
 		if ($result) {
-			$this->set_admin_notice ($options, 'User linked successfully', 'success');
+			$this->options->set_admin_notice ('User linked successfully', 'success');
 		} else {
-			$this->set_admin_notice ($options, 'User link failed', 'error');
+			$this->options->set_admin_notice ('User link failed', 'error');
 		}
-		update_option(OPTION_NAME, $options);
 	}
 	
-	public function display_data ($options) {
-		if (isset($options['webuser'])) {
-			echo 'User Meta Data For User ID ', $options['webuser'] ;
+	public function display_data () {
+		$webuser = $this->options->get ('webuser');
+		if (!empty ($webuser)) {
+			echo 'User Meta Data For User ID ', $webuser ;
 			echo '<pre>';
-			print_r (get_user_meta ($options['webuser'],'',true));
+			print_r (get_user_meta ($webuser,'',true));
 			echo '</pre>';
-			unset ($options['webuser']);
-			unset ($options['zohouser']);
-			update_option (OPTION_NAME, $options);
-
-			
+			$this->options->delete('webuser');
+			$this->options->delete('zohouser', true);
+		
 		}
 	}
 }

@@ -181,12 +181,66 @@ function bbz_user_banner() {
 add_action( 'woocommerce_thankyou', 'bbz_order_processing');
 
 function bbz_order_processing( $order_id ){	
+	// spawn cron job to process the order asap (short delay to allow current page to complete)
+	wp_schedule_single_event (time() + 180, 'bbz_process_order_hook', array ('order_id'=>$order_id));
+}
 
-	//bbz_debug ($order_id, 'In bbz_order_processing');
-	$order = new bbz_order;
-	$order->process_new_order ($order_id);
+add_action ('bbz_process_order_hook', 'bbz_process_single_order', 10, 2);
+
+function bbz_process_single_order ( $order_id ) {
+	$order = new bbz_order ($order_id);
+	$order->process_new_order ();
 	// error handling is dealt with by process_new_order
 }
+
+/*****
+* Set up hourly and daily cron jobs
+*
+******/
+
+if ( ! wp_next_scheduled( 'bbz_hourly_cron' ) ) {
+    wp_schedule_event( time(), 'hourly', 'bbz_hourly_cron' );
+}
+if ( ! wp_next_scheduled( 'bbz_daily_cron' ) ) {
+    wp_schedule_event( strtotime ('01:00 tomorrow'), 'daily', 'bbz_daily_cron' );
+}
+
+/******
+* Order processing
+* Called as a cron job to process any new orders to be sent to zoho and check if any are completed
+*****/
+
+add_action ('bbz_hourly_cron', 'bbz_process_orders');
+function bbz_process_orders ($resubmit=false) {
+	$orders = wc_get_orders (array ('status'=>'processing'));
+	foreach ($orders as $order) {
+		$bbz_order = new bbz_order ($order);
+		if ( empty($bbz_order->get_zoho_order_id)) {
+			//order not yet submitted to zoho
+			$bbz_order->process_new_order($resubmit);
+		} else {
+			// check if order completed yet
+			$bbz_order->update_order_status();
+		}
+	}
+}
+
+/*****
+*  Daily database updates
+*
+*****/
+// some error handling to notify admin if it fails would be a good idea...
+
+add_action ('bbz_daily_cron', 'bbz_daily_user_update');
+add_action ('bbz_daily_cron', 'bbz_update_products');  // function in bbz_utils
+
+function bbz_daily_user_update () {
+	bbz_load_sales_history ('all');
+	bbz_update_payment_terms ('all');
+}
+	
+
+
 
 // Change address placeholder text
 
