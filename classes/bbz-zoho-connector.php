@@ -407,8 +407,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	public function get_id_from_email ($email='') {
 		if (empty($email) ) return false;
 		
-		if (! $this->isconnected() ) return false;
-		
+	
 		$email_list = $this->get_customer_emails ();
 		
 		if ( !is_array($email_list)) return false;
@@ -431,7 +430,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 ****/
 	
 	public function get_customer_names () {
-		if (! $this->isconnected() ) return false;
 		
 		// Zoho returns data in pages of 200 by default
 		$more_pages = true;
@@ -792,6 +790,37 @@ if ( ! defined( 'ABSPATH' ) ) {
 				'response'=>$response));
 		}
 	}
+	
+	/*****
+	* get_salesorder
+	*
+	* @param $zoho_orderid 	Zoho order id to fetch.
+	* @param $filter		Key=>value pairs passed to zoho request.
+	*
+	*****/
+	public function get_salesorder ( $zoho_orderid, $filter=array()) {
+		if (empty ($zoho_orderid)) return false;
+		
+		$request = 'salesorders'. '/'. $zoho_orderid;
+		
+		$response = $this->get_books ($request, $filter);
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zc-035', 'Zoho get_salesorder failed', array(
+				'zoho order id'=>$zoho_orderid,
+				'filter' => $filter));
+			return $response;
+		}
+		if (isset ($response['salesorder'])) {
+			return $response ['salesorder'];
+		} else {
+			return new WP_Error ('bbz-zc-036', 'Zoho get_salesorder failed', array(
+				'zoho order id'=>$zoho_orderid,
+				'filter' => $filter,
+				'response'=>$response));
+		}
+	}
+			
+		
 
 	
 } //class

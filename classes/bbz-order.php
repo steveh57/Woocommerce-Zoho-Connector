@@ -375,6 +375,50 @@ class bbz_order {
 	public function update_order_status () {
 		// get zoho status for order
 		// if shipped, change woo order status to completed
+		if (empty($this->order) ) {
+			$response = new WP_Error ('bbz-ord-200', 'Invalid order object for update_order_status');
+			$this->notify_admin ($response);
+			return $response;
+		}
+		$zoho_order_id = $this->order->get_meta ('zoho_order_id', true);
+		
+		// check that order already been sent
+		if (empty($zoho_order_id)) {
+			$response = new WP_Error ('bbz-ord-201', 'update_order_status Order not yet submitted to Zoho', array ('order'=>$this->order));
+			$this->notify_admin ($response);
+			return $response;
+		}
+		
+		$options = new bbz_options ();
+		
+		// First identify the type of user
+		$user_id = $this->order->get_user_id ();
+		
+		$zoho = new zoho_connector;
+		$response = $zoho->get_salesorder ($zoho_order_id);
+		if (is_wp_error ($response) ) {
+			$response->add ('bbz-ord-202', 'update_order_status get_salesorder failed', array ('order'=>$this->order));
+			$this->notify_admin ($response);
+			return $response;
+		}
+		$shipments = array();
+		if (in_array ($response ['shipped_status'], array ('shipped', 'partially_shipped'))) {
+			foreach ($response ['packages'] as $package) {
+				$shipments [] = array (
+					'package_number' => $package ['package_number'],
+					'shipment_number' => $package['shipment_number'],
+					'shipment_date' => $package ['shipment_date'],
+					'carrier' => $package ['carrier'],
+					'service' => $package ['service'],
+					'tracking_number' => $package ['tracking_number'],
+				);
+			}
+		}
+		if (!empty ($shipments)) $this->order->update_meta_data ('zoho_shipments', $shipments);
+		if ($response ['shipped_status'] = 'shipped' ) $this->order->set_status ('completed');
+		$this->order->save();
+		
+		return $response;
 	}
 	
 	private function notify_admin ($error) {

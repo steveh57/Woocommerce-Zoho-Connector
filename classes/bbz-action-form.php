@@ -38,6 +38,7 @@ class bbz_action_form extends bbz_admin_form {
 						'update-users'	=>	'Update user info and sales history',
 //						'update-addresses' => 'Update all user addresses from zoho', // disabled - this is dangerous!
 						'submit-order' => 'Submit selected order to Zoho',
+						'process-orders' => 'Run order processing (load outstanding orders and update status)',
 						'check-products'	=>	'Check for missing products',
 					)
 				),
@@ -115,6 +116,11 @@ class bbz_action_form extends bbz_admin_form {
 			} else {
 				$this->options->set_admin_notice ( 'Order '.$order_id.' loaded successfully', 'success');
 			}
+			break;
+		
+		case 'process-orders':
+			$resubmit = $this->options->get('override') == 'on';
+			$result = bbz_process_orders($resubmit);
 			break;
 		}
 

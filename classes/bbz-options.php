@@ -33,7 +33,7 @@ class bbz_options {
 	
 	public function update ($option_name='', $value, $save=false) {
 		$this->options [$option_name] = $value;
-		if ($save) $this->save;
+		if ($save) $this->save();
 	}
 	
 	public function delete ($option_name='', $save=false) {

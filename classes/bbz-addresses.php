@@ -458,6 +458,7 @@ class bbz_addresses {
 		foreach ($order_address as $key=>$value) {
 			$woo_address [$type.'_'.$key] = $value;
 		}
+		$zoho_address_id = '';
 		// is this a guest user?
 		if (!empty($guest_zoho_id) ) {
 			// create new address for guest user
@@ -465,12 +466,7 @@ class bbz_addresses {
 		
 		} else { // registered user
 			// find match - address should have been created for user already 
-			$zoho_address_id = new WP_Error ('bbz-adr-004','Registered user address id not found', array(
-				'order address'=>$order_address,
-				'woo Address'=>$woo_address,
-				'type'=>$type,
-				'guest zoho id'=>$guest_zoho_id,
-				'bbz_addresses'=>$this->bbz_addresses));  // in case not found
+			
 			if (!empty ($this->bbz_addresses[$type])) {
 				foreach ($this->bbz_addresses[$type] as $address_id=>$bbz_address) {
 					if ($this->is_same ($woo_address, $bbz_address, $type) ) {
@@ -480,8 +476,18 @@ class bbz_addresses {
 					}
 				}
 			}
+			
 		}
-		return $zoho_address_id;
+		if (empty($zoho_address_id))  {
+			return new WP_Error ('bbz-adr-004','Registered user address id not found', array(
+				'order address'=>$order_address,
+				'woo Address'=>$woo_address,
+				'type'=>$type,
+				'guest zoho id'=>$guest_zoho_id,
+				'bbz_addresses'=>$this->bbz_addresses)); 
+		} else {
+			return $zoho_address_id;
+		}
 	}
  
 } //class bbz_address 

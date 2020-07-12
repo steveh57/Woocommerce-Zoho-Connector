@@ -35,12 +35,14 @@ class bbz_test_form extends bbz_admin_form {
 						'get-contact-id'	=> 'Get Zoho contact by id',
 						'get-addresses'		=> 'Get Zoho addresses for customer id',
 						'get-sales-history'	=> 'Get Zoho sales history',
+						'get_salesorder'	=> 'Get Zoho salesorder (dataset=zoho order id)',
 						'show-order'		=> 'Display woo order data (key=order no)',
 					//	'submit-order'		=> 'Submit order (key=order no) to Zoho',
 						'confirm-order'		=> 'Confirm sales order (key=zoho order id)',
 						'process-orders'	=> 'New process outstanding orders',
 						'get-user-meta'		=> 'Get user meta (key=user id, val=meta key(optional)',
 						'show-options'		=> 'Show bbz option data',
+						'set-option'		=> 'Set bbz option (key)',
 						'product-filter'	=> 'Test product filter',
 						'load-auth'		=> 'Load Authorisation',
 					)
@@ -84,6 +86,7 @@ class bbz_test_form extends bbz_admin_form {
 		$filterkey = $this->options->get ('filterkey');
 		$filtervalue = $this->options->get ('filtervalue');
 		$filter = array($filterkey=>$filtervalue);
+		$dataset = $this->options->get('dataset');
 		
 		if (empty ( $function )) return false;
 		echo '<h2>Results for "'.$function.'"</h2>';
@@ -136,6 +139,10 @@ class bbz_test_form extends bbz_admin_form {
 			case 'get-sales-history':
 				$data = $zoho->get_sales_history();
 				break;
+			
+			case 'get_salesorder':
+				$data = $zoho->get_salesorder ($dataset, $filter);
+				break;
 				
 			case 'product-filter':
 				$args = array();
@@ -152,19 +159,17 @@ class bbz_test_form extends bbz_admin_form {
 				$data = $this->options->getall();
 				break;
 				
+			case 'set-option':
+				$this->options->update ($filterkey, $filtervalue, true);
+				$data = $this->options->getall();
+				break;
+				
 			case 'get-dataset':
-				$response = $zoho->get_books ($this->options->get('dataset'), $filter);
-				if (is_array($response)) {
-					echo 'Headers: <pre>'; print_r ($response['headers']); echo '</pre>';
-					echo 'Body: <pre>'; print_r (json_decode ($response['body'], true)); echo '</pre>';
-				} else {
-					echo '<br>No data returned';
-				}
-				$data = false;
+				$data = $zoho->get_books ($dataset, $filter);
 				break;
 				
 			case 'get-analytics':
-				$response = $zoho->get_analytics ($this->options->get('dataset'), $filter);
+				$response = $zoho->get_analytics ($dataset, $filter);
 				if (is_array($response)) {
 //						echo 'Response: <pre>'; print_r ($response); echo '</pre>';
 					echo 'Headers: <pre>'; print_r ($response['headers']); echo '</pre>';
@@ -182,7 +187,7 @@ class bbz_test_form extends bbz_admin_form {
 				break;
 			
 			case 'process-orders':
-				$data = bbz_process_orders ($resubmit=$filtervalue);
+				bbz_process_orders ($resubmit=$filtervalue);
 				break;
 
 			case 'confirm-order':

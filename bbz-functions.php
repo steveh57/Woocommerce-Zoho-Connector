@@ -182,7 +182,7 @@ add_action( 'woocommerce_thankyou', 'bbz_order_processing');
 
 function bbz_order_processing( $order_id ){	
 	// spawn cron job to process the order asap (short delay to allow current page to complete)
-	wp_schedule_single_event (time() + 180, 'bbz_process_order_hook', array ('order_id'=>$order_id));
+	wp_schedule_single_event (time() + 30, 'bbz_process_order_hook', array ('order_id'=>$order_id));
 }
 
 add_action ('bbz_process_order_hook', 'bbz_process_single_order', 10, 2);
@@ -215,7 +215,7 @@ function bbz_process_orders ($resubmit=false) {
 	$orders = wc_get_orders (array ('status'=>'processing'));
 	foreach ($orders as $order) {
 		$bbz_order = new bbz_order ($order);
-		if ( empty($bbz_order->get_zoho_order_id)) {
+		if ( empty($bbz_order->get_zoho_order_id())) {
 			//order not yet submitted to zoho
 			$bbz_order->process_new_order($resubmit);
 		} else {
