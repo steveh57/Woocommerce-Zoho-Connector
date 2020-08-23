@@ -332,6 +332,8 @@ class bbz_addresses {
 	// convert a woo format address to zoho format.  $type is billing or shipping.
 	private function get_zoho_address ($woo_address, $type) {
 		$address_map = $this->get_w2z_address_field_map ($type);
+		// Zoho will reject certain characters, so need to eliminate them.
+		$invalid_characters = array("$", "%", "#", "<", ">", "|");
 
 		$zoho_address = array ();
 		$zoho_address ['attention'] = ''; //set up attention field
@@ -342,13 +344,16 @@ class bbz_addresses {
 				switch ($zoho_field_name) {
 					// zoho just has an attention field, not separate first and last names.
 					case 'firstname' :
-						if (!stristr ($woo_address[$woo_field_name], 'attention' )) { // if first_name isn't 'Attention:' or similar
-							$zoho_address['attention'] = $woo_address [$woo_field_name].' '.$zoho_address['attention'];
+						// if first_name isn't 'Attention:' or similar
+						if (!stristr ($woo_address[$woo_field_name], 'attention' )) { 
+							$zoho_address['attention'] = 
+								str_replace($invalid_characters, "",$woo_address [$woo_field_name]).' '.$zoho_address['attention'];
 						};
 						break;
 						
 					case 'lastname' :
-						$zoho_address['attention'] .= $woo_address [$woo_field_name];  // add to attention field
+						  // add to attention field
+						$zoho_address['attention'] .= str_replace($invalid_characters, "", $woo_address [$woo_field_name]);
 						break;
 					
 					case 'country':  //wc has country code - eg GB
@@ -356,7 +361,7 @@ class bbz_addresses {
 						break;
 						
 					default:
-						$zoho_address[$zoho_field_name] = $woo_address [$woo_field_name];
+						$zoho_address[$zoho_field_name] = str_replace($invalid_characters, "", $woo_address [$woo_field_name]);
 				}
 			}
 		}

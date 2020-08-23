@@ -74,7 +74,7 @@ class bbz_action_form extends bbz_admin_form {
 		$this->options->reload ();
 		switch ($this->options->get('function')) {
 		case 'update-products':
-			$result= $bbz_update_products();
+			$result= bbz_update_products();
 			if (! $result) {
 				$this->options->set_admin_notice ('Product update failed', 'error');
 			} else {

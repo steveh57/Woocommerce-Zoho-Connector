@@ -82,9 +82,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 	*****/
 	public function load_payment_terms ($zoho_contact) {
 		if ( empty ( $zoho_contact ['payment_terms_label']))  return false;
-		
+		$available_credit = 99999;
+		if ( !empty ($zoho_contact['credit_limit'])) {
+			$available_credit = $zoho_contact['credit_limit'];
+			if ( !empty ($zoho_contact ['outstanding_receivable_amount'])) {
+				$available_credit -= $zoho_contact ['outstanding_receivable_amount'];
+			}
+		}
+
 		$terms ['name'] = $zoho_contact ['payment_terms_label'];
 		$terms ['days'] = $zoho_contact ['payment_terms'];
+		$terms ['available_credit'] = $available_credit;
 		update_user_meta( $this->user_id, BBZ_UM_PAYMENT_TERMS, $terms );
 		return $terms;
 	}

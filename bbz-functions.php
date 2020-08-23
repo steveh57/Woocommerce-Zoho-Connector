@@ -21,6 +21,34 @@ function bbz_structured_data_product_filter ( $markup, $product) {
 	}
     return $markup;
 }
+// above doesn't work if RankMath plugin installed.  Try this
+
+add_filter( 'rank_math/snippet/rich_snippet_product_entity', "bbz_add_product_meta");
+function bbz_add_product_meta ( $entity ) {
+    if(is_product()){
+        global $product;
+		$sku = $product->get_sku();
+        if (strlen ($sku) == 13 & strpos ($sku, "978")===0) {
+              $entity['isbn'] = $sku;
+        }
+		$attribute_map = array (
+			"bookFormat"	=> 'format',
+			'numberOfPages'	=> 'pages',
+			'author'		=> 'author-2',
+			'publisher'		=> 'publisher',
+			'isPartOf'		=> 'series',
+			'position'		=> 'position',
+		);
+			
+		foreach ($attribute_map as $entname=>$slug) {
+			$attribute = $product->get_attribute ($slug);
+			if (!empty ($attribute) ) {
+				$entity [$entname] = $attribute;
+			}
+		}
+    }
+    return $entity;
+}
 
 /*********
  * Availability text filter
@@ -298,9 +326,48 @@ function bbz_affiliate_exclude_wholesale ($is_valid_token) {
 	}
 	return $is_valid_token;
 }
+// block paypal payment for wholsale user
+// not using the option built into wholesale pricing as this overrides the decision on whether to allow
+// payment on account.
+//add_filter( 'woocommerce_available_payment_gateways' , 'bbz_filter_available_payment_gateways' , 100 , 1 );
+function bbz_filter_available_payment_gateways( $available_gateways ) {
 
-
+	if ( current_user_can( 'manage_options' ) || !bbz_is_wholesale_customer() )
+		return $available_gateways;
 	
+	// for wholesale customer, block paypal as an option
+	$filtered_gateways  = array();
+	foreach ( $available_gateways as $gateway )
+		if ( !strstr($gateway->get_title(), 'paypal') ) 
+			$filtered_gateways[ $gateway->id ] = $gateway;
+
+	if ( !empty( $filtered_gateways ) ) {
+
+		WC()->payment_gateways()->set_current_gateway( $filtered_gateways );
+		
+		return $filtered_gateways;
+
+	} else
+		return $available_gateways;
+}
+// Info message before payment options
+		// insert a message about credit availability
+//add_action ('woocommerce_review_order_before_payment', 'bbz_action_before_payment');
+function bbz_action_before_payment () {
+	if (bbz_is_wholesale_customer()) {
+		$user_meta = new bbz_usermeta ();
+		$terms = $user_meta->get_payment_terms ();
+		if (!empty ($terms ['name'] ) && isset($terms['available_credit']) && $terms['available_credit'] > 0 ) {
+			echo 'Payment on account is available.  Terms: ', $terms['name'];
+			if (isset($terms['available_credit']) && $terms['available_credit'] > 0) {
+				echo 'Available credit: ', $terms['available_credit'];
+			}
+		} else {
+			echo 'Sorry, payment on account is not available.  Please contact Bittern Books to arrange credit facilities.';
+		}
+	}
+}
+
  
  
 ?>

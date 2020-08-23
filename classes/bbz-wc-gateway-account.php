@@ -46,6 +46,8 @@ class bbz_wc_gateway_account extends WC_Payment_Gateway {
 
 		// Customer Emails.
 		add_action( 'woocommerce_email_before_order_table', array( $this, 'email_instructions' ), 10, 3 );
+		
+		
 	}
 
 	/**
@@ -197,8 +199,11 @@ class bbz_wc_gateway_account extends WC_Payment_Gateway {
 		}
 		
 		// check zoho payment terms allows credit
-		$terms = get_user_meta( $user->ID, BBZ_UM_PAYMENT_TERMS, true);
-		if (empty ($terms ['days'] ) || $terms ['days'] < 30 ) return false; 
+		// unfortunately this is overridden by the gateway filter in wholesale price plugin.
+		$user_meta = new bbz_usermeta ();
+		$terms = $user_meta->get_payment_terms ();
+		if (empty ($terms ['days'] ) || $terms ['days'] < 10 ) return false;
+		if (isset($terms['available_credit']) && $terms['available_credit'] < WC()->cart->get_total('')) return false;
 		return parent::is_available();
 	}
 
@@ -266,4 +271,5 @@ class bbz_wc_gateway_account extends WC_Payment_Gateway {
 			echo wp_kses_post( wpautop( wptexturize( $this->instructions ) ) . PHP_EOL );
 		}
 	}
+	
 }

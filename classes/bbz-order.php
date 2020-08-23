@@ -151,7 +151,7 @@ class bbz_order {
 			$zoho_cust_id = $options->get ('guestuserid');
 			if (empty($zoho_cust_id)) {
 				$error = new WP_Error ('bbz-ord-001', 'No guest customer linked');
-				$this->notify_admin ($error);
+				$this->notify_admin ("Failed to create Zoho order", $error);
 				return $error; // no guest customer linked - can't process order
 			}
 			$payment_terms = array (
@@ -175,11 +175,11 @@ class bbz_order {
 		}
 		// if unable to get address id, can't create order.  Can we email admin?
 		if (is_wp_error ($zoho_address_id)) {
-			$error = $zoho_address_id->add('bbz-ord-002', 'Unable to get Zoho address id', array (
+			$zoho_address_id->add('bbz-ord-002', 'Unable to get Zoho address id', array (
 				'shipto'=> $shipto,
 				'bbz_addresses'=>$bbz_addresses));
-			$this->notify_admin ($error);
-			return $error;
+			$this->notify_admin ("Failed to create Zoho order", $zoho_address_id);
+			return $zoho_address_id;
 		}
 		
 		// now create the sales order
@@ -188,7 +188,7 @@ class bbz_order {
 			$response->add ('bbz-ord-003', 'Unable to create Zoho order', array(
 				"Zoho Customer ID"=>$zoho_cust_id,
 				"Zoho Address ID"=>$zoho_address_id));
-			$this->notify_admin ($response);
+			$this->notify_admin ("Failed to create Zoho order", $response);
 			return $response;
 		}
 		$zoho_order = $response;
@@ -214,7 +214,7 @@ class bbz_order {
 			if (is_wp_error ($response) ) {
 				$response->add ('bbz-ord-004', 'Unable to create Zoho invoice', array(
 					"Zoho Order"=>$zoho_order));
-				$this->notify_admin ($response);
+				$this->notify_admin ("Failed to create Zoho invoice for order", $response);
 				return $response;
 			}
 			$zoho_invoice = $response;
@@ -222,7 +222,7 @@ class bbz_order {
 			if (is_wp_error ($response) ) {
 				$response->add ('bbz-ord-005', 'Unable to create Zoho payment', array(
 					"Zoho invoice"=>$zoho_invoice));
-				$this->notify_admin ($response);
+				$this->notify_admin ("Failed to create Zoho payment for order", $response);
 				return $response;
 			}
 
@@ -377,7 +377,7 @@ class bbz_order {
 		// if shipped, change woo order status to completed
 		if (empty($this->order) ) {
 			$response = new WP_Error ('bbz-ord-200', 'Invalid order object for update_order_status');
-			$this->notify_admin ($response);
+			$this->notify_admin ("Failed to unpdate status for order", $response);
 			return $response;
 		}
 		$zoho_order_id = $this->order->get_meta ('zoho_order_id', true);
@@ -385,7 +385,7 @@ class bbz_order {
 		// check that order already been sent
 		if (empty($zoho_order_id)) {
 			$response = new WP_Error ('bbz-ord-201', 'update_order_status Order not yet submitted to Zoho', array ('order'=>$this->order));
-			$this->notify_admin ($response);
+			$this->notify_admin ("Failed to unpdate status for order", $response);
 			return $response;
 		}
 		
@@ -398,11 +398,12 @@ class bbz_order {
 		$response = $zoho->get_salesorder ($zoho_order_id);
 		if (is_wp_error ($response) ) {
 			$response->add ('bbz-ord-202', 'update_order_status get_salesorder failed', array ('order'=>$this->order));
-			$this->notify_admin ($response);
+			$this->notify_admin ("Failed to unpdate status for order", $response);
 			return $response;
 		}
 		$shipments = array();
-		if (in_array ($response ['shipped_status'], array ('shipped', 'partially_shipped'))) {
+		if ($response ['shipped_status']=='shipped') {  // order completely shipped
+			// collect shipment data and save to order - could be used in email to customer
 			foreach ($response ['packages'] as $package) {
 				$shipments [] = array (
 					'package_number' => $package ['package_number'],
@@ -413,17 +414,19 @@ class bbz_order {
 					'tracking_number' => $package ['tracking_number'],
 				);
 			}
+			if (!empty ($shipments)) $this->order->update_meta_data ('zoho_shipments', $shipments);
+			
+			//update order status - should trigger email to customer
+			$this->order->set_status ('completed');
+			$this->order->save();
 		}
-		if (!empty ($shipments)) $this->order->update_meta_data ('zoho_shipments', $shipments);
-		if ($response ['shipped_status'] = 'shipped' ) $this->order->set_status ('completed');
-		$this->order->save();
-		
+	
 		return $response;
 	}
 	
-	private function notify_admin ($error) {
-		$subject = "Failed to create Zoho order #".$this->order->get_order_number();
-		$message = "Website order failed to load in Zoho.  Error details follow:\n";
+	private function notify_admin ($message, $error) {
+		$subject = $message ." #".$this->order->get_order_number();
+		$message .= " Error details follow:\n";
 		if (is_wp_error ($error) ) {
 			$codes = $error->get_error_codes();
 			foreach ($codes as $error_code) {
