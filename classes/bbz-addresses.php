@@ -6,6 +6,17 @@
  *
  * This is used as an interface between the addresses held in Woocommerce
  * and the backend Zoho addresses.
+ *
+ *****************
+ * THIS MODULE NEEDS REVIEW
+ *
+ * Need to review how addresses are added to the guest account and what happens when an address on an order cannot be found in zoho.
+ * Sometimes if an address has been modified by the user when placing an order, the order is linked to the guest account.
+ *
+ * We're also hitting a problem with zoho where there are too many addresses on the guest account, so need to delete it after use.
+ *
+ ********************
+ *
  * The Woocommerce addresses are held in two ways:
  * a) the default billing and shipping addresses held explicitly in user metadata
  *		For these each entry is stored as billing_<name> or shipping_<name>
@@ -136,7 +147,10 @@ class bbz_addresses {
 	private function get_address_types () {
 		return $this->address_types;
 	}
-
+	// Zoho will reject addresses containing certain characters, use this list to eliminate them.
+	private function zoho_clean ($input_string) {
+		return str_replace(array("$", "%", "#", "<", ">", "|", "&"), "", $input_string);
+	}
 
 	/*****
 	*  update_from_thwma
@@ -330,10 +344,9 @@ class bbz_addresses {
 		return $woo_address;
 	}
 	// convert a woo format address to zoho format.  $type is billing or shipping.
+	// Zoho will reject addresses if they contain certain characters, use $this->invalid_zoho_characters to eliminate them.
 	private function get_zoho_address ($woo_address, $type) {
 		$address_map = $this->get_w2z_address_field_map ($type);
-		// Zoho will reject certain characters, so need to eliminate them.
-		$invalid_characters = array("$", "%", "#", "<", ">", "|");
 
 		$zoho_address = array ();
 		$zoho_address ['attention'] = ''; //set up attention field
@@ -346,22 +359,24 @@ class bbz_addresses {
 					case 'firstname' :
 						// if first_name isn't 'Attention:' or similar
 						if (!stristr ($woo_address[$woo_field_name], 'attention' )) { 
-							$zoho_address['attention'] = 
-								str_replace($invalid_characters, "",$woo_address [$woo_field_name]).' '.$zoho_address['attention'];
+							$zoho_address['attention'] = $this->zoho_clean ($woo_address [$woo_field_name]).' '.$zoho_address['attention'];
 						};
 						break;
 						
 					case 'lastname' :
 						  // add to attention field
-						$zoho_address['attention'] .= str_replace($invalid_characters, "", $woo_address [$woo_field_name]);
+						$zoho_address['attention'] .= $this->zoho_clean ($woo_address [$woo_field_name]);
 						break;
+						
+					case 'company' : // no company field in zoho address
+						$zoho_address['address'] = $this->zoho_clean ($woo_address [$woo_field_name]).' '.$zoho_address['address'];
 					
 					case 'country':  //wc has country code - eg GB
 						$zoho_address[$zoho_field_name] = WC()->countries->get_countries()[ $woo_address [$woo_field_name] ];
 						break;
 						
 					default:
-						$zoho_address[$zoho_field_name] = str_replace($invalid_characters, "", $woo_address [$woo_field_name]);
+						$zoho_address[$zoho_field_name] = $this->zoho_clean ($woo_address [$woo_field_name]);
 				}
 			}
 		}

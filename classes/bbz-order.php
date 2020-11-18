@@ -269,7 +269,6 @@ class bbz_order {
 		$zoho_order['terms_default'] = true;
 		
 		// Iterate Through Items
-		$total = 0;		
 		foreach ( $this->order->get_items() as $item_id=>$item ) {
 			$zoho_line = array();
 			$zoho_line ['item_id'] = get_post_meta ($item->get_product_id(), BBZ_PM_ZOHO_ID, true);
@@ -278,11 +277,8 @@ class bbz_order {
 			if ($zoho_line ['item_id'] !== false) {
 				$zoho_order ['line_items'][] = $zoho_line;
 			}
-			$total += $zoho_line['rate'] * $zoho_line ['quantity'];
 		}
-		if ( $total !== $this->order->get_subtotal()) {  // account for any rounding errors
-			$zoho_order ['adjustment'] = $this->order->get_subtotal() - $total;
-		};
+
 		//bbz_debug ($zoho_order, 'Order array before sending', false);
 		$zoho = new zoho_connector;
 		return $zoho->create_salesorder ($zoho_order);
@@ -330,6 +326,13 @@ class bbz_order {
 			}
 			$zoho_invoice ['line_items'][$line_no]['salesorder_item_id']= $line_item['line_item_id'];
 		}
+		// Check total matches
+		$adjustment = $this->order->get_total() - $zoho_order ['total'];
+		if ( $adjustment >= 0.5 ) {  // account for any rounding errors
+			$zoho_invoice ['adjustment'] = $adjustment;
+			$zoho_invoice ['adjustment_description'] = 'Rounding adjustment';
+		};
+		
 
 		//bbz_debug ($zoho_invoice, 'Invoice array before sending', false);
 		$zoho = new zoho_connector;
@@ -377,7 +380,7 @@ class bbz_order {
 		// if shipped, change woo order status to completed
 		if (empty($this->order) ) {
 			$response = new WP_Error ('bbz-ord-200', 'Invalid order object for update_order_status');
-			$this->notify_admin ("Failed to unpdate status for order", $response);
+			$this->notify_admin ("Failed to update status for order", $response);
 			return $response;
 		}
 		$zoho_order_id = $this->order->get_meta ('zoho_order_id', true);
@@ -385,7 +388,7 @@ class bbz_order {
 		// check that order already been sent
 		if (empty($zoho_order_id)) {
 			$response = new WP_Error ('bbz-ord-201', 'update_order_status Order not yet submitted to Zoho', array ('order'=>$this->order));
-			$this->notify_admin ("Failed to unpdate status for order", $response);
+			$this->notify_admin ("Failed to update status for order", $response);
 			return $response;
 		}
 		
@@ -398,7 +401,7 @@ class bbz_order {
 		$response = $zoho->get_salesorder ($zoho_order_id);
 		if (is_wp_error ($response) ) {
 			$response->add ('bbz-ord-202', 'update_order_status get_salesorder failed', array ('order'=>$this->order));
-			$this->notify_admin ("Failed to unpdate status for order", $response);
+			$this->notify_admin ("Failed to update status for order", $response);
 			return $response;
 		}
 		$shipments = array();

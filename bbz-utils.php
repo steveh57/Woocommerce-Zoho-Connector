@@ -255,11 +255,13 @@ function bbz_build_user_list ($arg) {
 }
 
 function bbz_is_wholesale_customer ($user_id = '') {
-	if (empty($user_id) && is_user_logged_in()) {
-		$user = wp_get_current_user();
-	} else {
+	$user = false;
+	if (!empty($user_id)) {
 		$user = get_user_by ('id', $user_id);
+	} elseif ( is_user_logged_in()) {
+		$user = wp_get_current_user();
 	}
+	
 	if (is_object ($user) ) {
 		foreach ($user->roles as $role) {
 			if ('wholesale_customer' == $role) return true;
