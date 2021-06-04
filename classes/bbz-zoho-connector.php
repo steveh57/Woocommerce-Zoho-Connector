@@ -141,6 +141,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 		return wp_remote_request ($request_url, $request_args);
 	}
 	/****
+	* _delete_data
+	*
+	* This is the basic internal DELETE call to the api
+	* returns response without any processing
+	****/
+	private function _delete_data($zoho_api_url, $request) {
+		$options = get_option( OPTION_NAME );
+		$request_url = $zoho_api_url.$request;
+		$request_args = array(
+			'method' => 'DELETE',
+			'headers' => array (
+				'Authorization' => 'Zoho-oauthtoken '.$options ['access_token']
+			),
+			'body'	=> '',
+			'timeout' => 30,
+		);
+		$options ['last_request'] = $request_url;
+		update_option (OPTION_NAME, $options);
+		
+		return wp_remote_request ($request_url, $request_args);
+	}
+	/****
 	* get_books, post_books, put_books
 	*
 	* calls to zoho books api
@@ -191,11 +213,32 @@ if ( ! defined( 'ABSPATH' ) ) {
 		$response = $this->_put_data (ZOHO_BOOKS_API_URL, $request, $postdata);
 		if (!is_array($response)) {
 			return new WP_Error ('bbz-zc-005', 'Zoho put_data failed', array(
+				'request'=>$request,
+				'postdata'=>$postdata,
 				'response'=>$response));
 		} else {
 			$zoho_data = json_decode($response['body'], true);
 			if (!isset($zoho_data['code']) || $zoho_data['code'] !== 0 ) {
 				return new WP_Error ('bbz-zc-006', 'Zoho put_data failed', $zoho_data);
+			} else {
+				return $zoho_data;
+			}
+		}
+		
+	}
+	
+	public function delete_books ($request) {
+		if (! $this->isconnected() )
+			return new WP_Error ('bbz-zc-007', 'Zoho connection failed in delete_books');
+		$response = $this->_delete_data (ZOHO_BOOKS_API_URL, $request);
+		if (!is_array($response)) {
+			return new WP_Error ('bbz-zc-008', 'Zoho delete_data failed', array(
+				'request'=>$request,
+				'response'=>$response));
+		} else {
+			$zoho_data = json_decode($response['body'], true);
+			if (!isset($zoho_data['code']) || $zoho_data['code'] !== 0 ) {
+				return new WP_Error ('bbz-zc-009', 'Zoho delete_data failed', $zoho_data);
 			} else {
 				return $zoho_data;
 			}
@@ -246,7 +289,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			'tax_class'	=> 'tax_name',			// tax class
 			'shipping_class'	=>	'cf_shipping_class_unformatted',	// shipping class code
 			'wholesale_only'	=> 'cf_wholesale_only_unformatted',	// Yes or No or blank
-			'inactive_reason'	=> 'cf_inactive_reason_unformatted',
+			'availability'	=> 'cf_inactive_reason_unformatted',
 			
 		);
 		if (! $this->isconnected() ) return false;
@@ -515,7 +558,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		if (isset ($zoho_data['contact'])) {
 			return $zoho_data['contact']; 
 		} else {
-			return new WP_Error ('bbz-zc-111', 'get_contact_by_id failed', $zoho_data);
+			return new WP_Error ('bbz-zc-113', 'get_contact_by_id failed', $zoho_data);
 		}
 
 	}
@@ -624,6 +667,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 	
 	}	
 
+/*****
+* delete_address
+*
+* deletes an address for specified customer, but does not remove it from the database
+* fields must be in correct format for zoho
+****/	
+
+	public function delete_address ($contact_id='', $address_id) {
+
+		$response = $this->delete_books ('contacts/'.$contact_id.'/address/', $address_id);
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zc-120', 'Zoho delete_address failed', array(
+				'contact_id'=>$contact_id,
+				'address'=>$address_id));
+			return $response;
+		}
+		//bbz_debug ($zoho_data, 'zoho add address');
+		return true;
+	
+	}
+	
 /*****
 * create_sales_order
 *

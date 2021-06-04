@@ -7,6 +7,41 @@
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
+/**
+ * @snippet       WooCommerce Holiday/Pause Mode
+ * @how-to        Get CustomizeWoo.com FREE
+ * @sourcecode    https://businessbloomer.com/?p=20862
+ * @author        Rodolfo Melogli
+ * @testedwith    WooCommerce 3.5.1
+ * @donate $9     https://businessbloomer.com/bloomer-armada/
+ */
+ 
+// Trigger Holiday Mode
+ 
+//add_action ('init', 'bbloomer_woocommerce_holiday_mode');
+ 
+ 
+// Disable Cart, Checkout, Add Cart
+ 
+function bbloomer_woocommerce_holiday_mode() {
+   remove_action( 'woocommerce_after_shop_loop_item', 'woocommerce_template_loop_add_to_cart', 10 );
+   remove_action( 'woocommerce_single_product_summary', 'woocommerce_template_single_add_to_cart', 30 );
+   remove_action( 'woocommerce_proceed_to_checkout', 'woocommerce_button_proceed_to_checkout', 20 );
+   remove_action( 'woocommerce_checkout_order_review', 'woocommerce_checkout_payment', 20 );
+   add_action( 'woocommerce_before_main_content', 'bbloomer_wc_shop_disabled', 5 );
+   add_action( 'woocommerce_before_cart', 'bbloomer_wc_shop_disabled', 5 );
+   add_action( 'woocommerce_before_checkout_form', 'bbloomer_wc_shop_disabled', 5 );
+}
+ 
+ 
+// Show Holiday Notice
+ 
+function bbloomer_wc_shop_disabled() {
+        wc_print_notice( 'Our Online Shop is Closed Today :)', 'error');
+} 
+
+
+
 /*********
 * Filter to add isbn to structured product data used by google
 *
@@ -63,22 +98,47 @@ function bbz_availability_filter( $availability ) {
 	// 'class' => 'out-of-stock', 'available-on-backorder', 'in-stock';
 	$text = $availability['availability'];
 	global $post;
+	$zoho_text = get_post_meta ($post->ID, BBZ_PM_INACTIVE_REASON, true);
 	switch ($availability['class']) {
 		case 'out-of-stock':
-			$newtext = get_post_meta ($post->ID, BBZ_PM_INACTIVE_REASON, true);
-			$text = !empty ($newtext) ? $newtext : 'Not available';
+			$text = !empty ($zoho_text) ? $zoho_text : 'Not available';
 			break;
 	
 		case 'available-on-backorder':
-			if (bbz_is_wholesale_customer()) return $availability;  // continue with standard text
-			$text = 'Not currently available';  //backorder only available to wholesale users
+			if (in_array ($zoho_text, BBZ_AVAIL_PRE)) {
+				$text = 'Available to pre-order';
+			} else {
+				$text = !empty ($zoho_text) ? $zoho_text." - available to backorder" : 'Available to backorder';
+			}
 			break;
 			
 		default:
-			$text = str_replace ('In stock (can be backordered)', 'In stock', $text);
+			$text = str_replace (' (can be backordered)', '', $text);
 	}
 	$availability['availability'] = $text;
 	return $availability;
+}
+
+/*********
+ * Availability text filter for trade order form
+ *
+ * Replaces 'out of stock' with more informative message
+ */
+add_filter( 'wwof_filter_product_item_action_controls', 'bbz_wwof_availability_filter', 20, 3);
+
+function bbz_wwof_availability_filter( $action_field, $product, $alternate ) {
+	// action field is html text for display in trade order form
+	$availability = get_post_meta ($product->get_id(), BBZ_PM_INACTIVE_REASON, true);
+	if (strpos ($action_field, 'Out of Stock')!==false && is_string($availability)) {
+		$action_field = str_replace ("Out of Stock", $availability, $action_field);
+	} elseif ( strpos ($action_field, 'Add To Cart')!==false && $product->get_stock_status() == 'onbackorder') {
+		if (in_array ($availability, BBZ_AVAIL_PRE)) {
+			$action_field = str_replace ('Add To Cart', $availability, $action_field);
+		} else {
+			$action_field = str_replace ('Add To Cart', 'Backorder', $action_field);
+		}
+	}
+	return $action_field;
 }
 
 /* Purchasable [sic] filter
@@ -90,7 +150,13 @@ add_filter( 'woocommerce_is_purchasable', 'bbz_is_purchasable_filter', 20, 2);
 
 function bbz_is_purchasable_filter( $purchasable, $product ) {
 	if ($purchasable && in_array ($product->get_stock_status(), array ('onbackorder', 'outofstock'))) {
-		if (!bbz_is_wholesale_customer()) return false;
+		$availability = get_post_meta ($product->get_id(), BBZ_PM_INACTIVE_REASON, true);
+		if (bbz_is_wholesale_customer()) {
+			if (in_array ($availability, BBZ_AVAIL_OFF) ) return false;
+		} else {  // retail customer - allow pre orders
+			if (!in_array ($availability, BBZ_AVAIL_PRE)) return false;
+		}
+		
 	}
 	return $purchasable;
 }

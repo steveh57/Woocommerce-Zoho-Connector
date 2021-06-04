@@ -41,6 +41,7 @@ class bbz_test_form extends bbz_admin_form {
 						'confirm-order'		=> 'Confirm sales order (key=zoho order id)',
 						'process-orders'	=> 'New process outstanding orders',
 						'get-user-meta'		=> 'Get user meta (key=user id, val=meta key(optional)',
+						'get-post-meta'		=> 'Get post meta (key=post id, val=meta key(optional)',
 						'show-options'		=> 'Show bbz option data',
 						'set-option'		=> 'Set bbz option (key)',
 						'product-filter'	=> 'Test product filter',
@@ -153,6 +154,11 @@ class bbz_test_form extends bbz_admin_form {
 			case 'get-user-meta':
 				$user_id = !empty ($filterkey) ? $filterkey : wp_get_current_user()->ID;
 				$data = get_user_meta ($user_id, $filtervalue);
+				break;
+			
+			case 'get-post-meta':
+				$post_id = $filterkey;
+				$data = get_post_meta ($post_id, $filtervalue, true);
 				break;
 				
 			case 'show-options':

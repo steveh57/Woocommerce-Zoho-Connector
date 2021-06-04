@@ -163,11 +163,11 @@ function bbz_update_products () {
 		foreach ( $product_posts as $post ) {  // for each woo product
 			$product = wc_get_product ($post);
 			$sku = $product->get_sku();
+			$post_id = $post->ID;
 			if ( !empty($sku) && isset ($items[$sku]) ) {	// have we got zoho data for this sku?
 				$item = $items[$sku];
 				//$items [ $sku ]['pid'] = $product->ID;
 
-				$post_id = $post->ID;
 				update_post_meta ($post_id, 'wholesale_customer_wholesale_price', $item['wsp']);
 				update_post_meta ($post_id, 'wholesale_customer_have_wholesale_price', 'yes');
 				update_post_meta ($post_id, BBZ_PM_ZOHO_ID, $item['zoho_id']);
@@ -187,33 +187,46 @@ function bbz_update_products () {
 				if (!empty ($item['shipping_class']) && isset ($shipping_map[$item['shipping_class']]) ) {
 					$product->set_shipping_class_id ($shipping_map[$item['shipping_class']]);
 				}
-				if ( $item['status'] == 'inactive' && !empty ($item ['inactive_reason'] )) {
-					update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['inactive_reason']);
-				}
 				$product->set_manage_stock (true) ;  // Ensure stock management enabled
 				if ($product->get_low_stock_amount() == 0) {
 					$product->set_low_stock_amount(3);  //set warning level to 3 if not set
 				}
-			}
-			
-			if ( !empty($sku) && isset ($items[$sku]) && $item['status'] == 'active') {
-				// product is available and can be backordered
-				$product->set_stock_quantity ($item['stock']);
-				$product->set_backorders ('notify');
-				$product->set_catalog_visibility ('visible'); 
-				// but if stock level is zero or wholesale only, restrict to wholesale customers
-				if ($item['stock'] == 0 || $item['wholesale_only'] == 'Yes') {
+				if (!empty ($item ['availability'] )) update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
+				if ($item['status'] == 'active') {
+					$product->set_stock_quantity ($item['stock']);
+					
+					// Restrict out of stock items to wholesale, unless available to pre-order
+					if ($item['wholesale_only'] === 'Yes' || ($item['stock'] <= 0 && !in_array ($item ['availability'], BBZ_AVAIL_PRE ) )) {
+						update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
+					} else {
+						update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'all');
+					}			
+					// Only allow backorders for temp unavailable or pre order items that are out of stock	
+					// if availability is blank, assume out of stock is temporary and allow backorders
+					if ( empty ($item ['availability']) || in_array ($item ['availability'], BBZ_AVAIL_TEMP)) {
+						$product->set_backorders ('notify');
+					} else {
+						$product->set_backorders ('no');
+					}
+					$product->set_catalog_visibility ('visible'); 
+					
+
+				} else {  //product is inactive on zoho (not available)
+					$product->set_stock_quantity (0);
+					$product->set_backorders ('no');
+					$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
+					
 					update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
-				} else {
-					update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'all');
-				}
-			} else {  //product is inactive or not listed on zoho (not available)
-				$product->set_stock (0);
-				$product->set_backorders ('no');
-				$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
-				update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
+
+				} 
+			} else {  //product is not listed on zoho (not available)
+					$product->set_stock_quantity (0);
+					$product->set_backorders ('no');
+					$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
+					update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
 
 			}
+			
 			$product->save();
 			$update_count += 1; 
 		}	

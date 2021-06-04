@@ -38,6 +38,12 @@ define ('BBZ_UM_ADDRESSES', 'bbz_addresses');
 define ('ZOHO_PAYPAL_ACCOUNT_ID', '1504573000005379057');
 define ('ZOHO_STRIPE_ACCOUNT_ID', '1504573000000149167');
 
+// Stock availability constants - must match values used in Zoho items Availability (fka Inactivity Reason) field
+define ('BBZ_AVAIL_OFF', array ('Out of print', 'Delisted', 'No longer available', 'Replaced by new edition'));
+define ('BBZ_AVAIL_TEMP', array ('Reprinting', 'Temporarily unavailable', 'Pre-order'));  //Allows backorders on these items
+define ('BBZ_AVAIL_PRE', array ('Pre-order'));
+
+
 global $bbz_product_index;  //make global to avoid reloading
 $bbz_product_index = array();
 

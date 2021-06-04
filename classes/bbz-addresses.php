@@ -241,7 +241,25 @@ class bbz_addresses {
 		}
 	}
 
-	
+	/******
+	*	delete_guest_address
+	*
+	* Unlinks the guest address from the guest account in zoho to stop the max number of additional addresses being exceeded.
+	* BUT DOESN'T WORK - GETS ERROR MESSAGE The HTTP method DELETE is not allowed for the requested resource
+	*
+	****/
+
+	public function delete_guest_address ($zoho_guest_id, $zoho_address_id) {
+		$zoho = new zoho_connector;
+		// delete from zoho guest account
+		$result = $zoho->delete_address ($zoho_guest_id, $zoho_address_id);
+		if (is_wp_error ($result)) {
+			$result->add('bbz-adr-102', 'bbz_addresses->delete_guest_address failed');
+			return $result;
+		} else {
+			return true;
+		}
+	}
 	
 	
 	/******

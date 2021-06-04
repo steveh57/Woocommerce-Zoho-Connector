@@ -225,13 +225,27 @@ class bbz_order {
 				$this->notify_admin ("Failed to create Zoho payment for order", $response);
 				return $response;
 			}
-
+/*			
+			// If customer is using the guest account, delete the address from the account to clean up
+			if ($zoho_cust_id == $options->get ('guestuserid')) {
+				$response = $bbz_addresses->delete_guest_address ($zoho_cust_id, $zoho_address_id);
+				if (is_wp_error ($response) ) {
+				$response->add ('bbz-ord-006', 'Unable to delete Zoho guest address' array (
+					'order'=>$this->order->get_order_number())
+					);
+				$this->notify_admin ("Failed to delete Zoho guest address", $response);
+				return $response;
+				}
+			}
+********** Returns message The HTTP method DELETE is not allowed for the requested resource
+*/
 				//bbz_debug ($zoho_payment, 'Payment created');
 
 		} else {
 			// if user is wholesale customer confirm anyway
 			if (bbz_is_wholesale_customer ($user_id)) {
 				$zoho->salesorder_confirm ($zoho_order_id);
+				
 			}
 		}
 		
