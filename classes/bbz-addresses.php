@@ -7,83 +7,20 @@
  * This is used as an interface between the addresses held in Woocommerce
  * and the backend Zoho addresses.
  *
- *****************
- * THIS MODULE NEEDS REVIEW
+ * Revision May 22 - no longer using ThemeHigh Multiple Addresses (THWMA)
+ * * simplify structure and just hold one shipping address for each user.
  *
- * Need to review how addresses are added to the guest account and what happens when an address on an order cannot be found in zoho.
- * Sometimes if an address has been modified by the user when placing an order, the order is linked to the guest account.
- *
- * We're also hitting a problem with zoho where there are too many addresses on the guest account, so need to delete it after use.
  *
  ********************
  *
- * The Woocommerce addresses are held in two ways:
- * a) the default billing and shipping addresses held explicitly in user metadata
+ * The Woocommerce default billing and shipping addresses are held explicitly in user metadata
  *		For these each entry is stored as billing_<name> or shipping_<name>
- 
- * b) the multiple addresses stored by the Themehigh Woocommerce Multiple Address (thwma) plugin and
- *    stored in user metadata in an array under key thwma_custom_address
- * Example format:
-		 Array(
-            [billing] => Array(
-                    [address_0] => Array (
-                            [billing_heading] => 
-                            [billing_first_name] => John
-                            [billing_last_name] => Doe
-                            [billing_company] => 
-                            [billing_country] => GB
-                            [billing_address_1] => Spitalfields Arts Market
-                            [billing_address_2] => 
-                            [billing_city] => London
-                            [billing_state] => London
-                            [billing_postcode] => E1 6RL
-                            [billing_phone] => 
-                            [billing_email] => steve@unilake.co.uk
-                        )
-                    [address_1] => Array (
-                            [billing_first_name] => Steve
-                            [billing_last_name] => Haines
-                            [billing_company] => 
-                            [billing_country] => GB
-                            [billing_address_1] => 24 Wroxham Road
-                            [billing_address_2] => Coltishall
-                            [billing_city] => Norwich
-                            [billing_state] => 
-                            [billing_postcode] => NR12 7EA
-                            [billing_phone] => 
-                            [billing_email] => steve@unilake.co.uk
-                            [billing_heading] => 
-                        )
-                )
-            [shipping] => Array (
-                    [address_0] => Array (
-                            [shipping_first_name] => John
-                            [shipping_last_name] => Doe
-                            [shipping_company] => 
-                            [shipping_country] => GB
-                            [shipping_address_1] => Spitalfields Arts Market
-                            [shipping_address_2] => 
-                            [shipping_city] => London
-                            [shipping_state] => London
-                            [shipping_postcode] => E1 6RL
-                            [shipping_phone] => 01394 388890
-                            [shipping_heading] => 
-                        )
-                    [address_1] => Array (
-                            [shipping_first_name] => Steve
-                            [shipping_last_name] => Haines
-                            [shipping_company] => 
-                            [shipping_country] => GB
-                            [shipping_address_1] => 24 Wroxham Road
-                            [shipping_address_2] => Coltishall
-                            [shipping_city] => Norwich
-                            [shipping_state] => 
-                            [shipping_postcode] => NR12 7EA
-                            [shipping_phone] => 
-                        )
-                )
-            [default_shipping] => address_1
-        )
+ * The corresponding Zoho address ids are stored in user metadata as
+ *	shipping_zoho_id
+ *	billing_zoho_id
+ *
+ * When a woocommerce user is first linked to a zoho customer a new shipping address is created in zoho and linked specifically to the user,
+ * and whenever the user places a sales order the users zoho address is updated.
  *
  *****/
  // If this file is called directly, abort.
@@ -93,148 +30,148 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class bbz_addresses {
 	
-	private $bbz_addresses = array ();
 	private $user_meta;
 	
- 	private $zoho_field_map = array ( 
+ 	private static $zoho_field_map = array ( 
 		// zoho name to woo name - add shipping or billing prefix
-		'address_id'	=>	'_zoho_id',
-		'firstname'		=>	'_first_name',
-		'lastname'		=>	'_last_name',
-		'company'		=>	'_company',
-		'address'		=> 	'_address_1',
-		'street2'		=>	'_address_2',
-		'city'			=>	'_city',
-		'zip'			=>	'_postcode',
-		'state'			=>	'_state',
-		'country'		=>	'_country',
-		'phone'			=>	'_phone'
+		'address_id'	=>	'zoho_id',
+		'firstname'		=>	'first_name',
+		'lastname'		=>	'last_name',
+		'company'		=>	'company',
+		'address'		=> 	'address_1',
+		'street2'		=>	'address_2',
+		'city'			=>	'city',
+		'zip'			=>	'postcode',
+		'state'			=>	'state',
+		'country'		=>	'country',
+		'phone'			=>	'phone'
 	);
-	private $address_types = array ('billing', 'shipping');
-	
-	private $zoho_address_names = array (
-		'billing'		=> 'billing_address',
-		'shipping'		=> 'shipping_address',
+	private static $woo_field_map = array ( 
+		// woo name to zoho name - add shipping or billing prefix for user meta names
+		//'zoho_id' 		=>	'address_id',
+		'first_name'	=>	array('attention','before'),
+		'last_name'		=>	array('attention','after'),
+		'company'		=>	array('address','line1'),
+		'address_1'		=> 	array('address','line2'),
+		'address_2' 	=>	'street2',
+		'city'			=>	'city',
+		'postcode'		=>	'zip',
+		'state'			=>	'state',
+		'country'		=>	'country',
+		'phone'			=>	'phone',
+		'email'			=>	'fax'	// this is an extra field created so we get the email into zoho
 	);
+	private static $zoho_address_types = array ('shipping', 'billing');
 	
 	function __construct ($user_id = '') {
 		$this->user_meta = new bbz_usermeta($user_id);  // defaults to current user if blank
-		$this->bbz_addresses = $this->user_meta->get_bbz_addresses();
 	}
 
 	// utility functions
- 	public function get_address_field_map () {
-		return $this->zoho_field_map;
-	}
-	public function get_w2z_address_field_map ($type) {
-		$w2z_map = array();
-		foreach ($this->zoho_field_map as $zoho_name=>$woo_suffix) {
-			$w2z_map [$type.$woo_suffix] = $zoho_name;
-		}
-		return $w2z_map;
-	}
-	public function get_woo_address_fields ($type) {
-		$w2z_fields = array();
-		foreach ($this->zoho_field_map as $zoho_name=>$woo_suffix) {
-			// copy field with type prefix, but excude zoho id from list
-			if (!($woo_suffix === '_zoho_id')) $w2z_fields[] = $type.$woo_suffix;
-		}
-		return $w2z_fields;
-	}
-	private function get_zoho_address_name ($type) {
-		return $this->zoho_address_names [$type];
-	}
-	private function get_address_types () {
-		return $this->address_types;
-	}
-	// Zoho will reject addresses containing certain characters, use this list to eliminate them.
-	private function zoho_clean ($input_string) {
-		return str_replace(array("$", "%", "#", "<", ">", "|", "&"), "", $input_string);
-	}
-
-	/*****
-	*  update_from_thwma
+	
+	/******
+	* get_woo_address_fields
 	*
-	*  Update bbz addresses, including update to zoho, from thwma address structure
-	*	called when thwma updates its usermeta array
-	*****/	
-	public function update_from_thwma ($thwma_addresses) {
-		//bbz_debug (array($thwma_addresses, $this->bbz_addresses), 'update_from_thwma');
-		//compare thwma addresses with stored bbz addresses
-		foreach ( $this->get_address_types() as $type) { //shipping and billing
-			if(isset($thwma_addresses[$type])) {
-				foreach ($thwma_addresses[$type] as $address_id=>$thwma_address) {
-					// is there a corresponding bbz address?
-					if (!isset ($this->bbz_addresses[$type][$address_id] )) {  // no matching bbz address, so need to add it
-						//bbz_debug ($thwma_address, 'About to add', false);
-						$this->add_address ($thwma_address, $type, $address_id);
-					} else {
-						// the address already exists, so we need to check if there are any changes
-						// compare thwma address to stored bbz address
-						//bbz_debug (array($this->bbz_addresses[$type][$address_id], $thwma_address), 'About to compare', false);
-						if (!$this->is_same ($this->bbz_addresses[$type][$address_id], $thwma_address, $type)) {
-							// if address has changed, update it in zoho
-							$this->update_address ($thwma_addresses[$type][$address_id], $type, $address_id);
-						}
-					}
-				}
+	* $type	prefix (shipping or billing) used in user meta and elsewhere - may be omitted
+	*
+	* returns an array of <woo_field_name> => <type>'_'<woo_field_name>
+	* if type is blank or omitted the value field is just the field name without a prefix
+	******/
+	public static function get_woo_address_fields ($type='') {
+		$woo_fields = array();
+		foreach (bbz_addresses::$woo_field_map as $woo_suffix=>$zoho_field) {
+			// copy field with type prefix, but excude zoho id from list
+			if (!($woo_suffix === 'zoho_id')) {
+				$woo_fields[$woo_suffix] = empty($type) ? $woo_suffix : $type.'_'.$woo_suffix;
 			}
 		}
-		//bbz_debug ($this->user_meta->get_bbz_addresses(), 'BBZ_ADDRESSES after updates');
-
-		// now let thwma carry on...
+		return $woo_fields;
+	}
+	
+	// Zoho will reject addresses containing certain characters, use this list to eliminate them.
+	private function zoho_clean ($input_string) {
+		$bad = array("&", "$", "%", "#", "<", ">", "|");
+		$replace = array (' and ', '', '', '', '', '', ' ');
+		return str_replace($bad, $replace, $input_string);
 	}
 	
 	/******
-	* add_address
+	*	woo_to_zoho
 	*
-	* Adds a new address to zoho and updates the bbz addresses in user meta
-	* $type is billing or shipping
-	* $address_id is name used by thwma (e.g. address_1)
+	*	convert a woo format address to zoho format
+	*
+	*  Zoho will reject addresses if they contain certain characters, use
+	*  $this->zoho_clean to eliminate them.
+	******/
+	
+	public function woo_to_zoho ($woo_address) {
+		$zoho_address = array ();
+		
+		foreach ($this::$woo_field_map as $woo_field_name => $zoho_field_name) {
+			//$woo_field_name = $type.$woo_suffix;
+			if (!empty ($woo_address[$woo_field_name]) && !empty ($zoho_field_name)) {
+				// create a clean version of the woo field, and convert country codes
+				if ($woo_field_name == 'country') { //wc has country code - eg GB
+					$clean = $this->zoho_clean (WC()->countries->get_countries()[ $woo_address [$woo_field_name] ]);
+				} else {
+					$clean = $this->zoho_clean ($woo_address [$woo_field_name]);
+				}
+				// some woo fields have to be combined to fit the zoho address model
+				if (is_array ($zoho_field_name)) {
+					if (empty($zoho_address[$zoho_field_name[0]])) {
+						$zoho_address[$zoho_field_name[0]] = $clean;
+					} else {
+						switch($zoho_field_name[1]) {
+							case 'before':
+								$zoho_address[$zoho_field_name[0]] = $clean.' '.$zoho_address[$zoho_field_name[0]];
+								break;
+							case 'after':
+								$zoho_address[$zoho_field_name[0]] .= ' '.$clean;
+								break;
+							case 'line1':
+								$zoho_address[$zoho_field_name[0]] = $clean."\n".$zoho_address[$zoho_field_name[0]];
+								break;
+							case 'line2':
+								$zoho_address[$zoho_field_name[0]] .= "\n".$clean;
+								break;
+						}
+					}
+				} else {
+					$zoho_address[$zoho_field_name] = $clean;
+				}
+			}
+		}
+		//bbz_debug (array ($woo_address, $zoho_address), 'bbz_translate_address_w2z');
+		return $zoho_address;
+	}
+
+	
+	/******
+	* add_zoho_address
+	*
+	* Adds a new address to zoho and returns zoho address id
+	* $woo_address array(suffix only, no shipping/billing prefix key values)
+	* $zoho_contact_id if blank defaults to current user's soho id
+	*
+	* Returns wp_error or zoho address id
+	*	*
+	* Only used locally apart form in test form, so could be private
 	*
 	****/
 
-	private function add_address ($woo_address, $type, $address_id) {
+	public function add_zoho_address ($woo_address, $zoho_contact_id='') {
 		// convert woo address to zoho format
-		$zoho_address = $this->get_zoho_address ($woo_address, $type);
-		$zoho_contact_id = $this->user_meta->get_zoho_id();
+		$zoho_address = $this->woo_to_zoho ($woo_address);
+		if (empty($zoho_contact_id)) $zoho_contact_id = $this->user_meta->get_zoho_id();
 
 		$zoho = new zoho_connector;
 		$result = $zoho->add_address ($zoho_contact_id, $zoho_address);
 		//bbz_debug (array($result, $zoho_address, $zoho_contact_id), 'After zoho add_address', false);
 		if (is_wp_error ($result)) {
-			$result->add('bbz-adr-001', 'bbz_addresses->add_address failed', array (
-				'woo_address'=> $woo_address,
-				'type' => $type,
-				'address_id', $address_id));
-			return $result;
-		} else {
-			$woo_address [$type.'_zoho_id'] = $result ['address_id'];
-			return $this->user_meta->update_bbz_address ($type, $address_id, $woo_address);
-		}
-		//bbz_debug ($user_meta->get_bbz_addresses(), 'BBZ_ADDRESSES after add', false);
-	}
-
-	/******
-	*	add_guest_address
-	*
-	* Adds a new address to zoho and returns the id.
-	* $type is billing or shipping
-	* $address_id is name used by thwma (e.g. address_1)
-	*
-	****/
-
-	private function add_guest_address ($woo_address, $type, $zoho_guest_id) {
-		// convert woo address to zoho format
-		$zoho_address = $this->get_zoho_address ($woo_address, $type);
-		$zoho = new zoho_connector;
-		// add to zoho guest account
-		$result = $zoho->add_address ($zoho_guest_id, $zoho_address);
-		if (is_wp_error ($result)) {
-			$result->add('bbz-adr-002', 'bbz_addresses->add_guest_address failed', array (
-				'woo_address'=> $woo_address,
-				'type' => $type,
-				'guest_id', $zoho_guest_id));
+			$result->add('bbz-adr-001', 'bbz_addresses->add_zoho_address failed', 
+				array (
+					'woo_address'=> $woo_address,
+					'zoho_address'=> $zoho_address));
 			return $result;
 		} else {
 			return $result ['address_id'];
@@ -242,14 +179,13 @@ class bbz_addresses {
 	}
 
 	/******
-	*	delete_guest_address
+	*	delete_address
 	*
-	* Unlinks the guest address from the guest account in zoho to stop the max number of additional addresses being exceeded.
-	* BUT DOESN'T WORK - GETS ERROR MESSAGE The HTTP method DELETE is not allowed for the requested resource
+	*  Deletes an address in zoho
 	*
 	****/
 
-	public function delete_guest_address ($zoho_guest_id, $zoho_address_id) {
+	public function delete_address ($zoho_guest_id, $zoho_address_id) {
 		$zoho = new zoho_connector;
 		// delete from zoho guest account
 		$result = $zoho->delete_address ($zoho_guest_id, $zoho_address_id);
@@ -263,53 +199,64 @@ class bbz_addresses {
 	
 	
 	/******
-	*	update_address
+	* update_zoho_address
 	*
 	* Updates an existing address in zoho and updates the bbz addresses in user meta
-	* $type is billing or shipping
-	* $address_id is name used by thwma (e.g. address_1)
+	* $Woo_address is the woo format address
+	* $address_id is the zoho address id to be updated
+	* $type = 'shipping' or 'billing'
+	* $zoho_contact_id
+	*
+	* Returns wp_error or zoho address id
 	*
 	****/
 
-	private function update_address ($woo_address, $type, $address_id) {
+	private function update_zoho_address ($woo_address, $address_id, $type='', $zoho_contact_id) {
 		
 		// convert woo address to zoho format
-		$zoho_address = $this->get_zoho_address ($woo_address, $type);
+		$zoho_address = $this->woo_to_zoho ($woo_address);
 		
-		$zoho_contact_id = $this->user_meta->get_zoho_id();
-		//get zoho address id from saved address
-		$address_id = $this->bbz_addresses[$type][$address_id][$type.'_zoho_id'];
-
 		// now load update to zoho api
 		$zoho = new zoho_connector;
 		$result = $zoho->update_address ($zoho_contact_id, $zoho_address, $address_id);
 		if (is_wp_error ($result)) {
-			$result->add ('bbz-adr-003', 'bbz_addresses->update_address failed', array (
+			// try creating a new address (old one might have been deleted)
+			$result = $zoho->add_address ($zoho_contact_id, $zoho_address);
+		};
+		if (is_wp_error ($result)) {
+			$result->add ('bbz-adr-003', 'bbz_addresses->update_zoho_address failed', array (
 				'zoho contact id'=> $zoho_contact_id, 
 				'zoho address' => $zoho_address,
 				'address id' => $address_id));
 			return $result;
-		} else {
-			$woo_address [$type.'_zoho_id'] = $result ['address_id'];
-			return $this->user_meta->update_bbz_address ($type, $address_id, $woo_address);
+		} else { //address successfully added or updated
+			// now record address id in usermeta
+			if (in_array($type, $this::$zoho_address_types)) {
+				$this->user_meta->update_zoho_address_id ($type, $result['address_id']);
+				return $result['address_id'];
+			}
 		}
 	}	
 
 	/*****
-	* 	get_woo_address  (zoho to woo)
+	* 	zoho to woo
 	*
 	*	uses fields from zoho contact record (as returned from zoho api)
 	*	to create a woo format address array.
 	*	$type is shipping, billing or addresses
 	* 	$index is only applicable for type=addresses
 	*****/
+	private $zoho_address_names = array (
+		'billing'		=> 'billing_address',
+		'shipping'		=> 'shipping_address',
+	);
 
-	private function get_woo_address ($zoho_contact, $type, $index='') {
+	private function zoho_to_woo ($zoho_contact, $type, $index='') {
 		//$this->_display ($zoho_contact);
 		$woo_address = array();
 		if ($type == 'billing' || $type == 'shipping') {
-			$zoho_address = $zoho_contact [$this->get_zoho_address_name($type)];
-		} elseif (isset($zoho_contact['addresses'][$index])) {
+			$zoho_address = $zoho_contact [$this->zoho_address_names[$type]];
+		} elseif (!empty ($index) && isset($zoho_contact['addresses'][$index])) {
 			$zoho_address = $zoho_contact ['addresses'][$index];
 			$type = 'shipping';  // use shipping prefix for additional addresses
 		} else return false;
@@ -337,79 +284,39 @@ class bbz_addresses {
 		//$this->_display ($zoho_address);
 		//bbz_debug(array($zoho_address, $zoho_contact));
 		
-		foreach ($this->zoho_field_map as $zoho_field => $woo_field) {
-			$woo_field_name = $type.$woo_field;
+		foreach ($this::$zoho_field_map as $zoho_field => $woo_field) {
 			if ( empty ( $zoho_address[$zoho_field])) {
 				// no data for this field from zoho
 				switch ($zoho_field) {
 					case 'phone':  // if shipping or billing phone blank, use main contact phone number
-						$woo_address [$woo_field_name] = $zoho_contact['phone'];
+						$woo_address [$woo_field] = $zoho_contact['phone'];
 						break;
 					case 'country':
-						$woo_address [$woo_field_name] = 'GB';  // default country to GB if blank
+						$woo_address [$woo_field] = 'GB';  // default country to GB if blank
 						break;
 					default:
-						$woo_address [$woo_field_name] = '';
+						$woo_address [$woo_field] = '';
 				}
 			} else {
 				if ($zoho_field == 'country'  && $zoho_address[$zoho_field] == 'United Kingdom' ) { //translate country name to woo code
-					$woo_address [$woo_field_name] = 'GB'; //$zoho_country_map[$zoho_address[$zoho_field]];
+					$woo_address [$woo_field] = 'GB'; //$zoho_country_map[$zoho_address[$zoho_field]];
 				} else {
-					$woo_address [$woo_field_name] = $zoho_address[$zoho_field];
+					$woo_address [$woo_field] = $zoho_address[$zoho_field];
 				}
 			}
 		}
 		return $woo_address;
 	}
-	// convert a woo format address to zoho format.  $type is billing or shipping.
-	// Zoho will reject addresses if they contain certain characters, use $this->invalid_zoho_characters to eliminate them.
-	private function get_zoho_address ($woo_address, $type) {
-		$address_map = $this->get_w2z_address_field_map ($type);
-
-		$zoho_address = array ();
-		$zoho_address ['attention'] = ''; //set up attention field
-		
-		foreach ($address_map as $woo_field_name => $zoho_field_name) {
-			//$woo_field_name = $type.$woo_suffix;
-			if (!empty ($woo_address[$woo_field_name]) && !empty ($zoho_field_name)) {
-				switch ($zoho_field_name) {
-					// zoho just has an attention field, not separate first and last names.
-					case 'firstname' :
-						// if first_name isn't 'Attention:' or similar
-						if (!stristr ($woo_address[$woo_field_name], 'attention' )) { 
-							$zoho_address['attention'] = $this->zoho_clean ($woo_address [$woo_field_name]).' '.$zoho_address['attention'];
-						};
-						break;
-						
-					case 'lastname' :
-						  // add to attention field
-						$zoho_address['attention'] .= $this->zoho_clean ($woo_address [$woo_field_name]);
-						break;
-						
-					case 'company' : // no company field in zoho address
-						$zoho_address['address'] = $this->zoho_clean ($woo_address [$woo_field_name]).' '.$zoho_address['address'];
-					
-					case 'country':  //wc has country code - eg GB
-						$zoho_address[$zoho_field_name] = WC()->countries->get_countries()[ $woo_address [$woo_field_name] ];
-						break;
-						
-					default:
-						$zoho_address[$zoho_field_name] = $this->zoho_clean ($woo_address [$woo_field_name]);
-				}
-			}
-		}
-		//bbz_debug (array ($woo_address, $zoho_address), 'bbz_translate_address_w2z');
-		return $zoho_address;
-	}
 	/*****
 	* is_same - compare two woo format addresses with field name prefixes $type
 	*
+	* This function isn't used anywhere, so set to private for now
 	******/
 	
-	public function is_same ($address1, $address2, $type) {
+	private function is_same ($address1, $address2, $type='') {
 		$match = true;
 		//bbz_debug ($this->get_woo_address_fields($type), 'Address fields');
-		foreach ($this->get_woo_address_fields($type) as $fieldname) {
+		foreach ($this->get_woo_address_fields($type) as $woo_name=>$fieldname) {
 			if ( !($address1[$fieldname] === $address2[$fieldname])) {
 				//bbz_debug (array($address1[$fieldname], $address2[$fieldname]), 'Comparing', false);
 				$match = false;
@@ -418,64 +325,47 @@ class bbz_addresses {
 		}
 		return $match;
 	}
+
 	
 	/*****
 	* load_from_zoho_contact
 	* 
 	* Loads addresses from the zoho contact dataset to user meta
-	* Also forces thwma(Woocommerce Multiple Address plugin) to set up its user meta address array
+	* Called when user first linked to zoho customer.
 	*
 	* $zoho_contact	array containing data returned from zoho
 	*****/
 	
 	public function load_from_zoho_contact ($zoho_contact) {
 		bbz_debug ($zoho_contact, 'Zoho Contact', false);
-		// Check if Thwma installed and clear existing array
-		// if you don't do this, update_address_to_user throws an error
 		$user_id = $this->user_meta->get_user_id();
 
-		if (class_exists( 'THWMA_Utils')) {
-			update_user_meta ($user_id, THWMA_Utils::ADDRESS_KEY, array());
-		}
-
-		// load default woocommerce shipping and billing addresses
-		foreach ($this->address_types as $type) {
-			$woo_address = $this->get_woo_address ($zoho_contact, $type);
+		// load default woocommerce shipping and billing addresses into woo usermeta
+		foreach (array ('billing', 'shipping') as $type) {
+			$woo_address = $this->zoho_to_woo ($zoho_contact, $type);
 			//bbz_debug ($woo_address, $type, false);
 			// save default billing/shipping woo addresses
 			$this->user_meta->update_woo_address ($type, $woo_address);
-			$this->user_meta->update_bbz_address ($type, 'address_0', $woo_address);
-
-			// if thwma installed, call thwma util functions to add address
-			// adding to thwma array will also trigger a call to update_from_thwma
-			// to update the bbz_addresses array.
-			if (class_exists( 'THWMA_Utils')) {
-				//$default_address = THWMA_Utils::get_default_address($user_id, $type);
-				//bbz_debug ($default_address, 'THWMA address', False);
-				$woo_address[$type.'_heading'] = '';
-				THWMA_Utils::update_address_to_user ( $user_id, $woo_address, $type, 'address_0');
-			}
 		}
 		
-		// Load additional addresses as extra shipping addresses
-		if (isset($zoho_contact['addresses'] )) {
-			foreach ($zoho_contact['addresses'] as $key=>$address) {
-				$woo_address = $this->get_woo_address ($zoho_contact, 'addresses', $key);
-				$address_id = 'address_'.($key+1);
-				$this->user_meta->update_bbz_address ('shipping', $address_id, $woo_address);
-				if (class_exists( 'THWMA_Utils')) {
-					//$default_address = THWMA_Utils::get_default_address($user_id, $type);
-					//bbz_debug ($default_address, 'THWMA address', False);
-					$woo_address['shipping_heading'] = '';
-					THWMA_Utils::update_address_to_user ( $user_id, $woo_address, 'shipping', $address_id);
-				}
-			}
+		// now create a new address in zoho specifically for this user
+		
+		$woo_address = $this->user_meta->get_woo_address ('shipping');
+		// Add in the email address - saved to the fax field in zoho
+		$woo_address['email'] = get_userdata ($user_id) ->user_email;
+		$result = $this->add_zoho_address ($woo_address);
+		if (is_wp_error ($result)) {
+			$result->add ('bbz-adr-004', 'bbz_addresses->add_zoho_address failed', array (
+				'zoho contact'=> $zoho_contact, 
+				'woo address' => $woo_address));
+				
+		} else {
+			$woo_address ['zoho_id'] = $result;
+			$this->user_meta->update_woo_address ('shipping', $woo_address);
 		}
-	
-		$this->bbz_addresses = $this->user_meta->get_bbz_addresses();
-		//bbz_debug ($this->bbz_addresses, 'bbz_addresses after load', false);
-		//bbz_debug (get_user_meta ($user_id, THWMA_Utils::ADDRESS_KEY, true), 'thwma addresses after load', false);
-
+			
+		return $result;
+		
 	}
 	
 	/*****
@@ -486,46 +376,28 @@ class bbz_addresses {
 	*
 	* $order_address	array containing the order address fields (billing or shipping)
 	* $type				string 'billing' or 'shipping'
-	* $guest_zoho_id	if specified, a new zoho address is created for this id
-	*					if blank, attempt to match to an existing address
+	* $zoho_contact_id
+	* $guest			true if this is a guest user - if so a new zoho address is created
 	*****/
 	
-	public function get_zoho_address_id ($order_address, $type, $guest_zoho_id='') {
-		// add type (shipping or billing) prefix to fields to match woo format
-		$woo_address = array();
-		foreach ($order_address as $key=>$value) {
-			$woo_address [$type.'_'.$key] = $value;
-		}
-		$zoho_address_id = '';
+	public function get_zoho_address_id ($order_address, $type, $zoho_contact_id, $guest=false) {
+
 		// is this a guest user?
-		if (!empty($guest_zoho_id) ) {
+		if ($guest ) {
 			// create new address for guest user
-			$zoho_address_id = $this->add_guest_address ($woo_address, $type, $guest_zoho_id);
-		
+			$result = $this->add_zoho_address ($order_address, $zoho_contact_id);
 		} else { // registered user
-			// find match - address should have been created for user already 
-			
-			if (!empty ($this->bbz_addresses[$type])) {
-				foreach ($this->bbz_addresses[$type] as $address_id=>$bbz_address) {
-					if ($this->is_same ($woo_address, $bbz_address, $type) ) {
-						// match found
-						$zoho_address_id = $bbz_address[$type.'_zoho_id'];
-						break;
-					}
-				}
-			}
-			
+			// update the address in zoho to make sure it matches the order
+			$result = $this->update_zoho_address ($order_address, $this->user_meta->get_zoho_address_id ($type), $type, $zoho_contact_id,);
 		}
-		if (empty($zoho_address_id))  {
-			return new WP_Error ('bbz-adr-004','Registered user address id not found', array(
+		if (is_wp_error ($result)) {
+			$result->add ('bbz-adr-004','get_zoho_address_id failed', array(
 				'order address'=>$order_address,
-				'woo Address'=>$woo_address,
 				'type'=>$type,
-				'guest zoho id'=>$guest_zoho_id,
-				'bbz_addresses'=>$this->bbz_addresses)); 
-		} else {
-			return $zoho_address_id;
+				'contact_id'=>$zoho_contact_id,
+				'guest'=>$guest)); 
 		}
+		return $result;
 	}
  
 } //class bbz_address 

@@ -84,16 +84,38 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class bbz_order {
 	
-	private $bbz_addresses = array ();
+//	private $bbz_addresses = array ();
 	private $user_meta;
+	private $user_id;
 	private $order;
-	
+	private $options;
+	private $guest=false;
+	private $zoho_cust_id;
 	
 	function __construct ($order) {
 		$this->order = wc_get_order( $order );
 		if (empty($this->order) ) {
 			return false;
 		}
+		$this->options = new bbz_options;
+		// Three situations:
+		// 1. Guest user - user not logged in, or web user not linked to zoho
+		// 2. Registered unlinked user  - depending on setting of BBZ_AUTO_CREATE_CONTACT
+		//    will either be treated as a guest or we create a new contact in zoho
+		// 3. Registered linked user
+		$this->user_id = $this->order->get_user_id ();
+		if (!empty($this->user_id)) { 
+			$this->user_meta = new bbz_usermeta ($this->user_id);
+			$this->zoho_cust_id = $this->user_meta->get_zoho_id();
+		}
+		// Check if we are treating this order as a guest order or linking it to a user.
+		if (empty($this->user_id) OR //User not logged in or
+			// no zoho id and we're not auto creating new zoho contacts
+			(BBZ_AUTO_CREATE_CONTACT === false AND empty($this->zoho_cust_id))) {
+			$this->guest = true;
+			$this->zoho_cust_id = $this->options->get (BBZ_OP_GUESTID);;
+		}
+		
 	}
 	
 	public function get_zoho_order_id () {
@@ -114,43 +136,30 @@ class bbz_order {
 	
 	public function process_new_order ($resubmit=false) {
 		if (empty($this->order) ) {
-			return new WP_Error ('bbz-ord-100', 'Invalid order parameter passed to process_new_order');
+			return new WP_Error ('bbz-ord-001', 'Invalid order parameter passed to process_new_order');
 		}
 		
 		// check that order hasn't already been sent - can be called twice if user refreshes page
 		if (!$resubmit && !empty($this->order->get_meta ('zoho_order_id', true))) {
-			return new WP_Error ('bbz-ord-101', 'Order has already been submitted to Zoho', array ('order'=>$this->order));
+			return new WP_Error ('bbz-ord-002', 'Order has already been submitted to Zoho', array ('order'=>$this->order));
 		}
-		
-		$options = new bbz_options ();
-		
-		// First identify the type of user
-		$user_id = $this->order->get_user_id ();
-		//bbz_debug ($user_id, "User ID", false);
-		if (empty($user_id)) { //guest
-			$zoho_cust_id = false;
-		} else {
-			//user registered, but may not have zoho account
-			$user_meta = new bbz_usermeta ($user_id);
-			$zoho_cust_id = $user_meta->get_zoho_id();  //null if no zoho account, treat as guest
-			// FUTURE: create a new customer in zoho for registered user
-		}
-		//bbz_debug ($zoho_cust_id, "Zoho Cust ID", false);
 		
 		// Get the address id
-		$bbz_addresses = new bbz_addresses ($user_id);
+		$bbz_addresses = new bbz_addresses ($this->user_id);
 		$shipto = $this->order->get_address ('shipping');
+		$shipto['email'] = $this->order->get_billing_email();
+		$shipto['phone'] = $this->order->get_billing_phone();
+		
 		/****
 		* May need to look at handling billing addresses:
 		* if payment on account always use default zoho address
 		* if paid by card/paypal use address from woo
 		******/
 		
-		if (empty($zoho_cust_id) ){  
-			// treat logged in user without zoho id as guest
-			$zoho_cust_id = $options->get ('guestuserid');
-			if (empty($zoho_cust_id)) {
-				$error = new WP_Error ('bbz-ord-001', 'No guest customer linked');
+		// Guest setting determined in construct
+		if ($this->guest) {
+			if (empty($this->zoho_cust_id)) {
+				$error = new WP_Error ('bbz-ord-003', 'No guest customer linked');
 				$this->notify_admin ("Failed to create Zoho order", $error);
 				return $error; // no guest customer linked - can't process order
 			}
@@ -158,24 +167,28 @@ class bbz_order {
 				'name' => 'Pay with order',
 				'days' => '0'
 			);
-			//bbz_debug ($zoho_cust_id, "Zoho Cust ID", false);
-			// create new address for guest customer in zoho
-			$zoho_address_id = $bbz_addresses->get_zoho_address_id ($shipto, 'shipping', $zoho_cust_id); // specifying cust id overrides default
-		} else {
-			$payment_terms = $user_meta->get_payment_terms();		
-			$zoho_address_id = $bbz_addresses->get_zoho_address_id ($shipto, 'shipping');
-			if (is_wp_error ($zoho_address_id)) {
-				// check in case the order's using the billing address
-				$zoho_address_id = $bbz_addresses->get_zoho_address_id ($shipto, 'billing');
-				if (is_wp_error ($zoho_address_id)) {
-					// and if that failed, we'll create a new address, although should already have been created by thwma
-					$zoho_address_id = $bbz_addresses->get_zoho_address_id ($shipto, 'shipping', $zoho_cust_id);
+			//bbz_debug ($this->zoho_cust_id, "Zoho Cust ID", false);
+		} else { // logged in user
+			if (empty($this->zoho_cust_id)) {
+				// No Zoho contact linked, so create new contact
+				$result = $this->create_zoho_contact();
+				if (is_wp_error ($result)) {
+					$result->add ('bbz-ord-004', 'Process_order failed', array (
+						'order'=>$this->order) );
+					$this->notify_admin ("Failed to create Zoho order", $result);
+					return $result;
 				}
+				$this->zoho_cust_id = $result ['contact_id'];
 			}
+			$payment_terms = $this->user_meta->get_payment_terms();
 		}
+		
+		// now try and get zoho address id - new address record is created if necessary
+		$zoho_address_id = $bbz_addresses->get_zoho_address_id ($shipto, 'shipping', $this->zoho_cust_id, $this->guest);
+		
 		// if unable to get address id, can't create order.  Can we email admin?
 		if (is_wp_error ($zoho_address_id)) {
-			$zoho_address_id->add('bbz-ord-002', 'Unable to get Zoho address id', array (
+			$zoho_address_id->add('bbz-ord-005', 'Unable to get Zoho address id', array (
 				'shipto'=> $shipto,
 				'bbz_addresses'=>$bbz_addresses));
 			$this->notify_admin ("Failed to create Zoho order", $zoho_address_id);
@@ -183,10 +196,10 @@ class bbz_order {
 		}
 		
 		// now create the sales order
-		$response = $this->create_zoho_order ($zoho_cust_id, $zoho_address_id, $payment_terms);
+		$response = $this->create_zoho_order ($zoho_address_id, $payment_terms);
 		if (is_wp_error($response) ) {
-			$response->add ('bbz-ord-003', 'Unable to create Zoho order', array(
-				"Zoho Customer ID"=>$zoho_cust_id,
+			$response->add ('bbz-ord-006', 'Unable to create Zoho order', array(
+				"Zoho Customer ID"=>$this->zoho_cust_id,
 				"Zoho Address ID"=>$zoho_address_id));
 			$this->notify_admin ("Failed to create Zoho order", $response);
 			return $response;
@@ -212,7 +225,7 @@ class bbz_order {
 			$response = $this->create_zoho_invoice ($zoho_order);
 			//bbz_debug ($zoho_invoice, 'Invoice created', false);
 			if (is_wp_error ($response) ) {
-				$response->add ('bbz-ord-004', 'Unable to create Zoho invoice', array(
+				$response->add ('bbz-ord-007', 'Unable to create Zoho invoice', array(
 					"Zoho Order"=>$zoho_order));
 				$this->notify_admin ("Failed to create Zoho invoice for order", $response);
 				return $response;
@@ -220,30 +233,27 @@ class bbz_order {
 			$zoho_invoice = $response;
 			$response = $this->create_zoho_payment ($zoho_invoice);
 			if (is_wp_error ($response) ) {
-				$response->add ('bbz-ord-005', 'Unable to create Zoho payment', array(
+				$response->add ('bbz-ord-008', 'Unable to create Zoho payment', array(
 					"Zoho invoice"=>$zoho_invoice));
 				$this->notify_admin ("Failed to create Zoho payment for order", $response);
 				return $response;
 			}
-/*			
+		
 			// If customer is using the guest account, delete the address from the account to clean up
-			if ($zoho_cust_id == $options->get ('guestuserid')) {
-				$response = $bbz_addresses->delete_guest_address ($zoho_cust_id, $zoho_address_id);
+			if ($this->guest) {
+				$response = $bbz_addresses->delete_address ($this->zoho_cust_id, $zoho_address_id);
 				if (is_wp_error ($response) ) {
-				$response->add ('bbz-ord-006', 'Unable to delete Zoho guest address' array (
-					'order'=>$this->order->get_order_number())
-					);
-				$this->notify_admin ("Failed to delete Zoho guest address", $response);
-				return $response;
+					$response->add ('bbz-ord-009', 'Unable to delete Zoho guest address',
+						array (	'order'=>$this->order->get_order_number())	);
+					$this->notify_admin ("Failed to delete Zoho guest address", $response);
+					return $response;
 				}
 			}
-********** Returns message The HTTP method DELETE is not allowed for the requested resource
-*/
 				//bbz_debug ($zoho_payment, 'Payment created');
 
-		} else {
+		} else {  // order not paid
 			// if user is wholesale customer confirm anyway
-			if (bbz_is_wholesale_customer ($user_id)) {
+			if (bbz_is_wholesale_customer ($this->user_id)) {
 				$zoho->salesorder_confirm ($zoho_order_id);
 				
 			}
@@ -251,20 +261,73 @@ class bbz_order {
 		
 		return $zoho_order;
 	}
+
+	/*****
+	* create_zoho_contact
+	*
+	* Creates a zoho contact for a retail customer
+	*
+	******/
+	private function create_zoho_contact () {
 	
+		$bbz_addresses = new bbz_addresses();
+		
+		// Build contact array
+		$contact = array();
+		$billing = $this->order->get_address('billing');
+		$shipping = $this->order->get_address('shipping');
+		$contact['contact_name'] = $billing['first_name'].' '.$billing['last_name'];
+		$contact['contact_type'] = 'customer';
+		$contact['customer_sub_type'] = 'individual';
+		$contact['payment_terms'] = '0';
+		$contact['payment_terms_label'] = 'Pay with order';
+		$contact['billing_address'] = $bbz_addresses->woo_to_zoho ($billing);
+		$contact['shipping_address'] = $bbz_addresses->woo_to_zoho ($shipping);
+		$contact['contact_persons'] = array(array(
+			'first_name' => $billing['first_name'],
+			'last_name' => $billing['last_name'],
+			'email' => $billing['email'],
+			'phone'=> $billing['phone'],
+			'is_primary_contact' => 'true',
+			));
+
+		//bbz_debug ($contact, 'Contact array before sending', false);
+		$zoho = new zoho_connector;
+		$result = $zoho->create_contact ($contact);
+		if (is_wp_error($result)) {
+			$result->add ('bbz-ord-010', 'bbz_order->create_contact failed', array (
+				'user_id'=>$this->user_id
+				) );
+			return $result;
+		}
+
+		// save zoho address and contact ids in usermeta
+		$this->user_meta->load_zoho_id ($result['contact_id']);
+		$this->user_meta->update_zoho_address_id ('billing', $result['billing_address']['address_id']);
+		$this->user_meta->update_zoho_address_id ('shipping', $result['shipping_address']['address_id']);
+		$this->user_meta->load_payment_terms ($result); 
+		return $result;
+	}
+
 	/*****
 	* create_zoho_order
 	*
 	* Creates the sales order in zoho
 	*
+	* TODO: & ampersand in reference field gets rejected by Zoho
+	*
 	******/
 	
-	private function create_zoho_order ($zoho_cust_id, $zoho_address_id, $payment_terms) {
+	private function create_zoho_order ($zoho_address_id, $payment_terms) {
 		$zoho_order = array();
-		$zoho_order ['customer_id'] = $zoho_cust_id;
+		$zoho_order ['customer_id'] = $this->zoho_cust_id;
 		$zoho_order ['shipping_address_id'] = $zoho_address_id;
 		$zoho_order ['salesorder_number'] = ZOHO_SALESORDER_PREFIX.$this->order->get_order_number();
-		$zoho_order ['reference_number'] = $this->order->get_shipping_last_name();
+		if (!$this->order->is_paid() && $this->order->get_payment_method() !== 'account') {
+			$zoho_order ['reference_number'] = "HOLD - NOT PAID";
+		} else {			
+			$zoho_order ['reference_number'] = $this->order->get_shipping_last_name();
+		}
 		$zoho_order ['custom_fields'][] = array (
 				'customfield_id'	=> '1504573000002888095', // Order source
 				'value'				=> 'Website',
@@ -405,12 +468,7 @@ class bbz_order {
 			$this->notify_admin ("Failed to update status for order", $response);
 			return $response;
 		}
-		
-		$options = new bbz_options ();
-		
-		// First identify the type of user
-		$user_id = $this->order->get_user_id ();
-		
+			
 		$zoho = new zoho_connector;
 		$response = $zoho->get_salesorder ($zoho_order_id);
 		if (is_wp_error ($response) ) {
@@ -419,7 +477,7 @@ class bbz_order {
 			return $response;
 		}
 		$shipments = array();
-		if ($response ['shipped_status']=='shipped') {  // order completely shipped
+		if (in_array($response ['shipped_status'], array('shipped', 'partially_shipped', 'fulfilled'))) {  // order shipped
 			// collect shipment data and save to order - could be used in email to customer
 			foreach ($response ['packages'] as $package) {
 				$shipments [] = array (

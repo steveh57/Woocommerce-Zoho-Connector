@@ -61,7 +61,7 @@ class bbz_linkuser_form extends bbz_admin_form {
 		$zohouser = $this->options->get('zohouser'); //zoho user id
 		
 		if ($webuser == 0) { // Guest user selected
-			$this->options->update('guestuserid', $zohouser);
+			$this->options->update(BBZ_OP_GUESTID, $zohouser);
 			$result = true;
 		} else {
 			$result = bbz_link_user ($webuser, $zohouser);

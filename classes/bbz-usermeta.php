@@ -50,40 +50,55 @@ if ( ! defined( 'ABSPATH' ) ) {
 	}
 	
 	// update the default woo billing or shipping address
+	// $type shipping or billing
+	// $address array of field names and values, field names without shipping/billing prefix
 	public function update_woo_address ($type, $address) {
 		foreach ($address as $key=>$value) {
 			if (empty($value)) {
-				delete_user_meta ($this->user_id, $key);
+				delete_user_meta ($this->user_id, $type.'_'.$key);
 			} else {
-				update_user_meta( $this->user_id, $key, $value );
+				update_user_meta( $this->user_id, $type.'_'.$key, $value );
 			}
 		}
 	}
-	
-	// get all bbz addresses in structured array
-	public function get_bbz_addresses () {
-		return get_user_meta ($this->user_id, BBZ_UM_ADDRESSES, true);
+	// get woo billing or shipping address from usermeta
+	public function get_woo_address ($type) {
+		$woo_address = array();
+		foreach (bbz_addresses::get_woo_address_fields($type) as $woo_field_name=>$user_meta_key) {
+			// returns array of woo_field_name=>user_meta_key
+			// e.g. 'city'=>'shipping_city'
+			$woo_address[$woo_field_name] = get_user_meta ($this->user_id, $user_meta_key, true);
+		}
+		return $woo_address;
 	}
-	// update a specific bbz address
-	// if bbz_addresses doesn't exist in user meta it is created.
-	// returns updated bbz addresses array
-	public function update_bbz_address ($type, $key, $address) {
-		$bbz_addresses = $this->get_bbz_addresses();
-		$bbz_addresses = is_array ($bbz_addresses) ? $bbz_addresses : array();
-		$bbz_addresses [$type][$key] = $address;
-		update_user_meta ($this->user_id, BBZ_UM_ADDRESSES, $bbz_addresses);
-		return $bbz_addresses;
+			
+		
+	
+	// get zoho address id for billing or shipping address
+	public function get_zoho_address_id ($type) {
+		return get_user_meta ($this->user_id, $type.'_zoho_id', true);
 	}
 	
+	// update zoho address id for billing or shipping address
+	public function update_zoho_address_id ($type, $address_id) {
+		return update_user_meta ($this->user_id, $type.'_zoho_id', $address_id);
+	}
 	/*****
 	* Load payment terms
 	*
 	* Load payment terms from zoho_contact to usermeta
+	* Notes
+	* - zoho credit limit zero => no credit limit set
+	* - zoho payment terms field uses negative numbers to indicate special terms:
+	*		0 = due on receipt
+	*		-2 = due end of the month
+	*		-3 = paymnet due end of next month
+	
 	*****/
 	public function load_payment_terms ($zoho_contact) {
 		if ( empty ( $zoho_contact ['payment_terms_label']))  return false;
 		$available_credit = 99999;
-		if ( !empty ($zoho_contact['credit_limit'])) {
+		if ( !empty ($zoho_contact['credit_limit']) && ($zoho_contact['credit_limit'] > 0) ) {
 			$available_credit = $zoho_contact['credit_limit'];
 			if ( !empty ($zoho_contact ['outstanding_receivable_amount'])) {
 				$available_credit -= $zoho_contact ['outstanding_receivable_amount'];

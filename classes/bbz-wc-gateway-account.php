@@ -199,11 +199,11 @@ class bbz_wc_gateway_account extends WC_Payment_Gateway {
 		}
 		
 		// check zoho payment terms allows credit
-		// unfortunately this is overridden by the gateway filter in wholesale price plugin.
 		$user_meta = new bbz_usermeta ();
 		$terms = $user_meta->get_payment_terms ();
-		if (empty ($terms ['days'] ) || $terms ['days'] < 10 ) return false;
-		//if (isset($terms['available_credit']) && $terms['available_credit'] < WC()->cart->get_total('')) return false;
+		// -ve days is used for end of month payment terms in zoho
+		if (empty ($terms ['days'] ) || ($terms ['days'] >= 0 && $terms ['days'] < 10 )) return false;
+		if (isset($terms['available_credit']) && WC()->cart && $terms['available_credit'] < WC()->cart->get_total('')) return false;
 		return parent::is_available();
 	}
 

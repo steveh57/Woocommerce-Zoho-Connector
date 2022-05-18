@@ -80,11 +80,12 @@ class bbz_admin_page {
 			<a href="?page=bbz-admin-page&tab=setup" class="nav-tab <?php echo $active_tab == 'setup' ? 'nav-tab-active' : ''; ?>">Setup</a>
 			<a href="?page=bbz-admin-page&tab=action" class="nav-tab <?php echo $active_tab == 'action' ? 'nav-tab-active' : ''; ?>">Actions</a>	
 			<a href="?page=bbz-admin-page&tab=link-user" class="nav-tab <?php echo $active_tab == 'link-user' ? 'nav-tab-active' : ''; ?>">Link User</a>
-			<a href="?page=bbz-admin-page&tab=short-desc" class="nav-tab <?php echo $active_tab == 'short-desc' ? 'nav-tab-active' : ''; ?>">Short Description</a>	
-			
 			<a href="?page=bbz-admin-page&tab=test" class="nav-tab <?php echo $active_tab == 'test' ? 'nav-tab-active' : ''; ?>">Testing</a>
 		</h2>
 <?php		
+/*
+			<a href="?page=bbz-admin-page&tab=short-desc" class="nav-tab <?php echo $active_tab == 'short-desc' ? 'nav-tab-active' : ''; ?>">Short Description</a>	
+*/			
 		
 		// Display message from last action if set.
 		$this->render_admin_notice ();
@@ -105,11 +106,7 @@ class bbz_admin_page {
 			case 'link-user':
 				$form = new bbz_linkuser_form ();
 				break;
-			case 'short-desc':
-//				echo '<pre>';
-//				print_r (wc_get_attribute_taxonomies()); echo '</pre>';
-				$form = new bbz_admin_form ('bbzform-short-desc');
-				break;
+
 			case 'test':
 			
 				// Testing form

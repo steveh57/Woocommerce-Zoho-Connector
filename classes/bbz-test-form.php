@@ -41,17 +41,17 @@ class bbz_test_form extends bbz_admin_form {
 						'confirm-order'		=> 'Confirm sales order (key=zoho order id)',
 						'process-orders'	=> 'New process outstanding orders',
 						'get-user-meta'		=> 'Get user meta (key=user id, val=meta key(optional)',
+						'delete-user-meta'	=> 'Delete user meta (key=user_id or ALL, val=meta key (required)',
 						'get-post-meta'		=> 'Get post meta (key=post id, val=meta key(optional)',
 						'show-options'		=> 'Show bbz option data',
 						'set-option'		=> 'Set bbz option (key)',
 						'product-filter'	=> 'Test product filter',
 						'load-auth'		=> 'Load Authorisation',
+						'delete-address'	=> 'Delete Zoho address (key=customer_id, value=address_id)',
+						'add-shipping-addresses' => 'Add a new shipping address (key=ALL or val=user id'
 					)
 				),
-				'dataset' => array(
-					'type'		=> 'text',
-					'title'		=> 'Dataset',
-				),
+
 				'filterkey'		=> array (
 					'type'		=> 'text',
 					'title'		=> 'Filter Key'
@@ -59,6 +59,10 @@ class bbz_test_form extends bbz_admin_form {
 				'filtervalue'	=> array (
 					'type'		=> 'text',
 					'title'		=> 'Filter Value'
+				),
+				'dataset' => array(
+					'type'		=> 'text',
+					'title'		=> 'Dataset',
 				),
 				'state'			=> array(    // Status hidden
 					'type'          => 'hidden',
@@ -156,6 +160,22 @@ class bbz_test_form extends bbz_admin_form {
 				$data = get_user_meta ($user_id, $filtervalue);
 				break;
 			
+			case 'delete-user-meta':
+				$user_id = !empty ($filterkey) ? $filterkey : wp_get_current_user()->ID;
+				if ($user_id === 'ALL') {
+					$data = array();
+					$users = get_users();
+					foreach ($users as $user) {
+						$result = delete_user_meta ($user->ID, $filtervalue);
+						if ($result) $data[$user->data->display_name] = $filtervalue.' deleted';
+					}
+									
+				} else {
+					
+					$data = delete_user_meta ($user_id, $filtervalue);
+				}
+				break;
+			
 			case 'get-post-meta':
 				$post_id = $filterkey;
 				$data = get_post_meta ($post_id, $filtervalue, true);
@@ -199,15 +219,43 @@ class bbz_test_form extends bbz_admin_form {
 			case 'confirm-order':
 				$order_id = $filterkey;
 				echo 'Processing order ', $order_id;
-				$zoho = new zoho_connector;
-				$result = $zoho->confirm_salesorder($order_id);
-				echo 'Result ', $result ? $result : 'failed';
+				$data = $zoho->confirm_salesorder($order_id);
 				break;
+				
+			case 'delete-address':
+				$data = $zoho->delete_address($filterkey, $filtervalue);
+				break;
+				
+			case 'add-shipping-addresses':
+				if ($filterkey === 'ALL') {
+					echo ('All function disabled');
+				} else {
+					
+					$user_id = $filtervalue;
+					$usermeta = new bbz_usermeta ($user_id);
+					$data['shipto'] = $usermeta->get_woo_address ('shipping');
+					$data['shipto']['email'] = "test@unilake.co.uk";					
+					$bbz_addresses = new bbz_addresses ($user_id);
+					
+					$data['address_id'] = $bbz_addresses->get_zoho_address_id ($data['shipto'], 'shipping');
+					
+					$data['usermeta'] =	get_user_meta ($user_id);
+				}		
+				break;
+
 
 		}
 
 		if (!empty($data)){
-			if (is_array($data)) {
+			if (is_wp_error ($data) ) {
+				$codes = $data->get_error_codes();
+				foreach ($codes as $error_code) {
+					echo 'Error: '.$error_code.' -> '.$data->get_error_message ($error_code)."\n";
+					echo 'Error data: <pre>'.print_r ($data->get_error_data ($error_code), true)."</pre>\n";
+				}
+			}					
+		
+			elseif (is_array($data)) {
 				echo count ($data) . ' items returned.<br>';
 				echo '<pre>'; print_r ($data); echo '</pre>';
 			} else {

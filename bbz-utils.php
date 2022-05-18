@@ -51,7 +51,7 @@ function bbz_link_user ($user_id='', $zoho_id='') {  //$user is wp user object
 				'user_id'=>$user_id,
 				'$zoho_id'=>$zoho_id) );
 		}
-
+		
 		return $result;
 	}
 	return false;
@@ -64,6 +64,7 @@ function bbz_link_user ($user_id='', $zoho_id='') {  //$user is wp user object
 * Load sales history from Zoho
 *
 * Fetches sales history data from Zoho and loads it in user_meta for each linked user.
+* Run daily from bbz-functions cron
 *
 * Arg can either be:
 * - empty, defaulting to current user
@@ -93,6 +94,7 @@ function bbz_load_sales_history ($arg='') {
 }
 
 // Update payment terms in user meta from zoho contact data
+// Run daily from bbz-functions cron
 function bbz_update_payment_terms ( $arg='') {
 	$user_list = bbz_build_user_list ($arg);
 	$update_count = 0;
@@ -193,6 +195,11 @@ function bbz_update_products () {
 				}
 				if (!empty ($item ['availability'] )) update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
 				if ($item['status'] == 'active') {
+					// Set woo stock levels
+					// TODO: Enhance this by:
+					// Get Backorder SQL from Zoho Analytices to find stock requirements for open sales orders
+					// Subtract from 'available' stock figure to get true stock availability.
+				
 					$product->set_stock_quantity ($item['stock']);
 					
 					// Restrict out of stock items to wholesale, unless available to pre-order
@@ -242,9 +249,13 @@ function bbz_update_products () {
 
 function bbz_debug ($data, $title='', $exit=true) {
 	if ( BBZ_DEBUG ) {
-		if (is_null ($data)) $data = 'NULL';
-		if ($data===false) $data = 'FALSE';
-		if (empty($data)) $data = 'NO DATA';
+		if (is_null ($data)) {
+			$data = 'NULL';
+		} elseif ($data===false) {
+			$data = 'FALSE';
+		} elseif (empty($data)){
+			$data = 'NO DATA';
+		}
 		echo '<br>', $title, '<pre>';
 		print_r ($data);
 		echo '</pre>';

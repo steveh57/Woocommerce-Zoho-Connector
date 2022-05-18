@@ -38,7 +38,7 @@ class bbz_admin_form {
 				'Provide the required details to register your application - e.g.:<br>'.
 				'Client Name: Bittern Books Website<br>'.
 				'Client domeain: bitternbooks.co.uk<br>'.
-				'Aurothorized redirect URIs: https://bitternbooks.co.uk/wp-admin/admin-post.php</p>'.
+				'Authorized redirect URIs: https://bitternbooks.co.uk/wp-admin/admin-post.php</p>'.
 				'<p>On successful registration, you will be provided with a set of OAuth 2.0 credentials such as a Client ID '.
 				'and Client Secret that are known to both Zoho and your application. Do not share these credentials anywhere.</p>',
 			'fields'	=>	array (
@@ -88,7 +88,7 @@ class bbz_admin_form {
 				'title'			=> 'Reset Credentials',
 			)
 		),
-		'bbzform-short-desc'	=> array (
+/*		'bbzform-short-desc'	=> array (
 			'name'		=> 'bbzform-short-desc',
 			'action'	=>	'short_desc_action',
 			'title'		=>	'<h2>Configure short description</h2>',
@@ -137,7 +137,7 @@ class bbz_admin_form {
 						'cols'		=>	60,
 					)
 				),
-*/
+
 			),
 			'button'		=> array (
 				'name'			=> 'submit',
@@ -145,7 +145,7 @@ class bbz_admin_form {
 				'title'			=> 'Save'
 			)
 		)
-
+*/
 	);
 	
 	protected $options;
@@ -431,12 +431,12 @@ class bbz_admin_form {
 	private function reset_action () {
 		$this->options->reset();
 	}
-	
+/*	
 	private function short_desc_action ($options) {
 		
 	}
 	
-	
+*/	
 	
 	
 }

@@ -16,11 +16,11 @@ class bbz_options {
 	private $options;
 	
 	function __construct() {
-		$this->options = get_option ( OPTION_NAME);
+		$this->options = get_option ( BBZ_OPTION_NAME);
 		if(!$this->options || !is_array($this->options) ) $this->options =array();
 	}
 	public function reload() {
-		$this->options = get_option ( OPTION_NAME);
+		$this->options = get_option ( BBZ_OPTION_NAME);
 	}
 
 	
@@ -38,12 +38,12 @@ class bbz_options {
 	
 	public function delete ($option_name='', $save=false) {
 		unset ($this->options [$option_name]);
-		if ($save) $this->save;
+		if ($save) $this->save();
 
 	}
 	
 	public function save () {
-		update_option (OPTION_NAME, $this->options );
+		update_option (BBZ_OPTION_NAME, $this->options );
 	}
 	
 	public function reset () {

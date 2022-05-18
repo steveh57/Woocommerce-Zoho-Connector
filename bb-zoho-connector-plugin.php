@@ -5,8 +5,8 @@
     Description:    Elements to link Bittern Books website to Zoho
     Author:         Steve Haines
     Author URI:     http://www.unilake.co.uk/
-    Version:        1.0604
-    Requirements:   PHP 5.2.4 or above, WordPress 3.4 or above. Admin Page Framework 3.1.3 or above
+    Version:        2.0518
+    Requirements:   PHP 5.2.4 or above, WordPress 3.4 or above.
 */
 
 // If this file is called directly, abort.
@@ -28,11 +28,9 @@ include_once ( BBZ_CLASSPATH . '/bbz-linkuser-form.php');
 include_once ( BBZ_CLASSPATH . '/bbz-action-form.php');
 include_once ( BBZ_CLASSPATH . '/bbz-admin-page.php');
 include_once ( BBZ_PATH . '/bbz-wwlc-filters.php');
-include_once ( BBZ_PATH . '/bbz-short-description.php');
 include_once ( BBZ_PATH . '/bbz-wwof-filters.php');
-include_once ( BBZ_PATH . '/bbz-thwma-filters.php');
 include_once ( BBZ_PATH . '/bbz-functions.php');  // miscellaneous actions and filter functions
-//include_once ( BBZ_PATH . '/bbz-registration-form.php'); // user registration form shortcode
+
 
 // Submenu class
 class bbz_submenu {

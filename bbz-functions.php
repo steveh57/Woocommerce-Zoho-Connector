@@ -16,31 +16,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @donate $9     https://businessbloomer.com/bloomer-armada/
  */
  
-// Trigger Holiday Mode
- 
-//add_action ('init', 'bbloomer_woocommerce_holiday_mode');
- 
- 
-// Disable Cart, Checkout, Add Cart
- 
-function bbloomer_woocommerce_holiday_mode() {
-   remove_action( 'woocommerce_after_shop_loop_item', 'woocommerce_template_loop_add_to_cart', 10 );
-   remove_action( 'woocommerce_single_product_summary', 'woocommerce_template_single_add_to_cart', 30 );
-   remove_action( 'woocommerce_proceed_to_checkout', 'woocommerce_button_proceed_to_checkout', 20 );
-   remove_action( 'woocommerce_checkout_order_review', 'woocommerce_checkout_payment', 20 );
-   add_action( 'woocommerce_before_main_content', 'bbloomer_wc_shop_disabled', 5 );
-   add_action( 'woocommerce_before_cart', 'bbloomer_wc_shop_disabled', 5 );
-   add_action( 'woocommerce_before_checkout_form', 'bbloomer_wc_shop_disabled', 5 );
-}
- 
- 
-// Show Holiday Notice
- 
-function bbloomer_wc_shop_disabled() {
-        wc_print_notice( 'Our Online Shop is Closed Today :)', 'error');
-} 
-
-
 
 /*********
 * Filter to add isbn to structured product data used by google
@@ -174,52 +149,6 @@ add_filter ( 'wwp_product_original_price', 'bbz_product_original_price_filter', 
 function bbz_product_original_price_filter ($html, $wsp, $price) {
 	return '<span class="original-computed-price">RRP ' . $price . '</span>';
 }
-/**
- * Remove the "Additional Information" tab that displays the product attributes.
- */
- 
-add_filter( 'woocommerce_product_tabs', 'bbz_remove_product_attributes_tab', 100 );
-function bbz_remove_product_attributes_tab( $tabs ) {
-    unset( $tabs['additional_information'] );
-    return $tabs;
-}
-
-/**
- * Display product attributes in the top right of the single product page.
- * 
- * @param $product
- */ 
-add_action( 'woocommerce_product_meta_end', 'bbz_list_attributes' );
-function bbz_list_attributes( $product ) {
-	global $product;
-	global $post;
- 
-	$attributes = $product->get_attributes();
-	if ( ! $attributes ) {
-		return;
-	}
-	 
-	foreach ( $attributes as $attribute ) {
-		if(strpos($attribute[ 'name' ], "pa_") !== false){
-			// Contains "pa_"? Then it's an attribute array and you're free to run the code
-
-			// Get the taxonomy.
-			$terms = wp_get_post_terms( $product->get_id(), $attribute[ 'name' ], 'all' );
-			$taxonomy = $terms[ 0 ]->taxonomy;
-			$taxonomy_object = get_taxonomy( $taxonomy );
-			$attribute_label = $taxonomy_object->labels->name;
-			
-			// Display the label followed by a clickable list of terms.
-			$terms_as_text = get_the_term_list( $post->ID, $attribute[ 'name' ] ,
-				'<span class="attributes">' . $attribute_label . ': ' , ', ', '</span>' );
-			if (!empty($terms_as_text)){
-	//			$tags_stripped = strip_tags($terms_as_text, '<span>');
-	//			echo str_replace("Product","",$tags_stripped);
-				echo str_replace("Product","",$terms_as_text);
-			}
-		}
-	}
-}
 
 /**
  * Hide shipping rates when free shipping is available.
@@ -270,9 +199,13 @@ function bbz_user_banner() {
 /**
  * Order handling
  * Called when order is complete to post order in Zoho
+ * (for testing call process_single_order, in live call order processing)
  */
-
-add_action( 'woocommerce_thankyou', 'bbz_order_processing');
+if ( BBZ_DEBUG ) {
+	add_action( 'woocommerce_thankyou', 'bbz_process_single_order');
+} else {
+	add_action( 'woocommerce_thankyou', 'bbz_order_processing');
+}
 
 function bbz_order_processing( $order_id ){	
 	// spawn cron job to process the order asap (short delay to allow current page to complete)
@@ -434,6 +367,18 @@ function bbz_action_before_payment () {
 	}
 }
 
+/******
+* Ensure shipping address is shown for wholesale customers
+*
+******/
+add_filter ('woocommerce_ship_to_different_address_checked', 'bbz_woocommerce_ship_to_destination', 10, 1);
+function bbz_woocommerce_ship_to_destination ($checked) {
+	if (bbz_is_wholesale_customer()) {
+		// Always show shipping address
+		$checked = true;
+	}
+	return $checked;
+}
  
  
 ?>
