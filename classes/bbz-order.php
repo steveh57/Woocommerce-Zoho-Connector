@@ -214,7 +214,7 @@ class bbz_order {
 		
 		// if order is paid (excluding on account), create an invoice and payment record.
 		$zoho = new zoho_connector;		
-		if ($this->order->is_paid() && $this->order->get_payment_method() !== 'account') {
+		if ($this->order->is_paid() && $this->order->get_payment_method() !== BBZ_PAYMENT_METHOD_ACCOUNT) {
 			$payment_details = "Paid ".$this->order->get_date_paid().' '.
 				$this->order->get_payment_method_title().' '.$this->order->get_transaction_id();
 			$zoho->salesorder_addcomment ($zoho_order_id, $payment_details);
@@ -430,15 +430,17 @@ class bbz_order {
 			'invoice_id' => $zoho_invoice ['invoice_id'],
 			'amount_applied' => $this->order->get_total()
 		);
-		if (stristr ($this->order->get_payment_method(), 'paypal')) {
+
+		if (stristr ($this->order->get_payment_method(), BBZ_PAYMENT_METHOD_PAYPAL)) {
 			$zoho_payment ['payment_mode'] = 'Paypal';
 			$zoho_payment ['account_id'] = ZOHO_PAYPAL_ACCOUNT_ID;
 			$zoho_payment ['bank_charges'] = $this->order->get_meta ('_paypal_transaction_fee', true);
 			$zoho_payment ['description'] = 'Paid by '.$this->order->get_meta ('Payer PayPal address', true);
-		} elseif (stristr ($this->order->get_payment_method(), 'stripe')) {
+		} elseif (stristr ($this->order->get_payment_method(), BBZ_PAYMENT_METHOD_STRIPE)) {
 			$zoho_payment ['payment_mode'] = 'Stripe';
 			$zoho_payment ['account_id'] = ZOHO_STRIPE_ACCOUNT_ID;
-		} else return false;
+		} else return new WP_Error ('bbz-ord-021', 'Unrecognised payment method', array ('order'=>$this->order));
+		
 		$zoho_payment ['reference_number'] = $zoho_invoice ['reference_number'];
 
 		//bbz_debug ($zoho_payment, 'Payment array before sending', false);

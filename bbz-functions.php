@@ -32,7 +32,7 @@ function bbz_structured_data_product_filter ( $markup, $product) {
     return $markup;
 }
 // above doesn't work if RankMath plugin installed.  Try this
-
+/*
 add_filter( 'rank_math/snippet/rich_snippet_product_entity', "bbz_add_product_meta");
 function bbz_add_product_meta ( $entity ) {
     if(is_product()){
@@ -59,7 +59,7 @@ function bbz_add_product_meta ( $entity ) {
     }
     return $entity;
 }
-
+*/
 /*********
  * Availability text filter
  *

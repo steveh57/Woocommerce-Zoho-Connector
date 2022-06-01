@@ -19,6 +19,14 @@ define ('ZOHO_BOOKS_API_URL', 'https://books.zoho.com/api/v3/');
 define ('ZOHO_ANALYTICS_API_URL', 'https://analyticsapi.zoho.com/api/steve@bitternbooks.co.uk/ZohoBooks/');
 define ('ZOHO_AUTH_SCOPE', 'ZohoBooks.fullaccess.all,ZohoReports.data.read');
 
+// Zoho REST call timeout in seconds
+define ('BBZ_ZOHO_TIMEOUT', 40);
+
+// Payment method names used by woocommerce payment gateways
+define ('BBZ_PAYMENT_METHOD_PAYPAL', 'ppcp-gateway');
+define ('BBZ_PAYMENT_METHOD_STRIPE', 'stripe');
+define ('BBZ_PAYMENT_METHOD_ACCOUNT', 'account');
+
 if (stristr(site_url(), 'bitternbooks.co.uk') !== false) { // if running on live site
 	define ('ZOHO_SALESORDER_PREFIX', 'WO-');
 	define ('BBZ_DEBUG', false);

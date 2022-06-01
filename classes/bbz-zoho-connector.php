@@ -92,7 +92,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				'Authorization' => 'Zoho-oauthtoken '.$options ['access_token']
 			),
 			'body'	=> $filter,
-			'timeout' => 30,
+			'timeout' => BBZ_ZOHO_TIMEOUT,
 		);
 		$options ['last_request'] = $request_url;
 		update_option (BBZ_OPTION_NAME, $options);
@@ -112,7 +112,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		$request_args = array(
 			'headers' => array ('Authorization' => 'Zoho-oauthtoken '.$options ['access_token']),
 			'body' => '',
-			'timeout' => 30,
+			'timeout' => BBZ_ZOHO_TIMEOUT,
 			);
 		if (!empty ($postdata)) {
 			$request_args ['body'] = 'JSONString='.json_encode ($postdata);
@@ -137,7 +137,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				'Authorization' => 'Zoho-oauthtoken '.$options ['access_token']
 			),
 			'body'	=> 'JSONString='.json_encode ($postdata),
-			'timeout' => 30,
+			'timeout' => BBZ_ZOHO_TIMEOUT,
 		);
 		$options ['last_request'] = $request_url;
 		update_option (BBZ_OPTION_NAME, $options);
@@ -159,7 +159,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				'Authorization' => 'Zoho-oauthtoken '.$options ['access_token']
 			),
 			'body'	=> '',
-			'timeout' => 30,
+			'timeout' => BBZ_ZOHO_TIMEOUT,
 		);
 		$options ['last_request'] = $request_url;
 		update_option (BBZ_OPTION_NAME, $options);

@@ -14,7 +14,9 @@
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
+// Force use of legacy filter
 
+add_filter('wwof_use_legacy_order_form_filter', '__return_true', 11);
 	
 /*****
 * bbz_wwof_product_filter
@@ -51,11 +53,21 @@ function bbz_wwof_product_filter ($product_args) {
 			}
 			
 		}
-		if (in_array ('9991', $wwof_product_list)) {	
-			$new_product_list = array_merge ($new_product_list, wc_get_product_ids_on_sale());
+		$query_args = array(
+			'status'=> 'publish',
+			'limit'=>30,
+			'orderby' => 'date',
+			'order' => 'DESC',
+			'return' => 'ids'
+			);
+		
+		if (in_array ('9991', $wwof_product_list)) {	// on sale selected
+			$query_args ['tag']=array('on-sale');
+			$new_product_list = wc_get_products( $query_args);
 		}
-		if (in_array ('9992', $wwof_product_list)) {	
-			$new_product_list = array_merge ($new_product_list, wc_get_featured_product_ids());
+		if (in_array ('9992', $wwof_product_list)) {	// new selected
+			$query_args ['tag']=array('new-in');
+			$new_product_list = wc_get_products( $query_args);
 		}
 
 		if (!empty($new_product_list)) $product_args['post__in'] = $new_product_list;
