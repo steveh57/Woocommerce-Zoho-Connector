@@ -300,5 +300,114 @@ function bbz_email_admin ($subject, $message) {
 	wp_mail ($admin_email, $subject, $message);
 
 }
+/*******
+*	bbz_update_cross_sells 
+*
+*	Adds reciprocals to cross sells for all products
+*	e.g. if product A has products B and C as cross sells, 
+*	A is added as a cross sell to B and C
+*
+*******/
+ 
+function bbz_update_cross_sells () {
+
+		// get list of product posts
+		$args = array (
+			'post_type' => 'product',	// only get product posts
+			'numberposts' => -1,
+			'fields' => 'ids',			// get all of the ids in an array
+		);
+		$product_posts = get_posts ( $args);
+		$related = array();
+		
+		foreach ( $product_posts as $post_id ) {  // for each woo product
+			$product = wc_get_product ($post_id);
+			$csids = $product->get_cross_sell_ids();
+			if (!empty($csids)) {
+				$cross_sells[$post_id] = $csids;
+				foreach ($csids as $cross_sell_id) {
+					$related [$cross_sell_id][] = $post_id;
+				}
+			}
+		}
+		
+		// Now add related ids to cross sell ids
+		
+		foreach ($related as $post_id=>$related_ids) {
+			foreach ($related_ids as $rid) {
+				//check if already in cross sells, and add if not
+				if (!isset ($cross_sells[$post_id]) || !in_array ($rid, $cross_sells[$post_id])) {
+					$cross_sells[$post_id][] = $rid;
+				}
+			}
+		}
+		
+		// And finally update the product records
+		foreach ($cross_sells as $post_id=>$cross_sell_ids) {
+			$product = wc_get_product ($post_id);
+			$product->set_cross_sell_ids($cross_sell_ids);
+			$product->save();
+		}
+		
+		return $cross_sells;
+
+		
+	}
+		
+						 
+ 
+												  
+														 
+									   
+ 
+		
+ 
+									
+
+							  
+				 
+													  
+					   
+														 
+	
+									  
+					 
+  
+																   
+										
+										   
+						
+									
+										
+											
+	 
+	
+   
+  
+										  
+  
+												
+								   
+													 
+																					  
+									 
+	 
+	
+   
+  
+										   
+													   
+										
+												 
+					
+   
+  
+					  
+
+  
+  
+   
+ 
+ 
 
 ?>

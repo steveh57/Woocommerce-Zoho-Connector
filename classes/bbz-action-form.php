@@ -40,6 +40,7 @@ class bbz_action_form extends bbz_admin_form {
 						'submit-order' => 'Submit selected order to Zoho',
 						'process-orders' => 'Run order processing (load outstanding orders and update status)',
 						'check-products'	=>	'Check for missing products',
+						'update_cross_sells' => 'Update product cross sells with reciprocals'
 					)
 				),
 				'filterkey'		=> array (
@@ -121,6 +122,10 @@ class bbz_action_form extends bbz_admin_form {
 		case 'process-orders':
 			$resubmit = $this->options->get('override') == 'on';
 			$result = bbz_process_orders($resubmit);
+			break;
+			
+		case 'update_cross_sells':
+			$result = bbz_update_cross_sells();
 			break;
 		}
 

@@ -260,6 +260,7 @@ function bbz_process_orders ($resubmit=false) {
 
 add_action ('bbz_daily_cron', 'bbz_daily_user_update');
 add_action ('bbz_daily_cron', 'bbz_update_products');  // function in bbz_utils
+add_action ('bbz_daily_cron', 'bbz_update_cross_sells');  // update reciprocal cross sells (in bbz-utils)
 
 function bbz_daily_user_update () {
 	bbz_load_sales_history ('all');

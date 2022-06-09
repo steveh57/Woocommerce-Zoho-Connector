@@ -66,10 +66,11 @@ class bbz_linkuser_form extends bbz_admin_form {
 		} else {
 			$result = bbz_link_user ($webuser, $zohouser);
 		}
-		if ($result) {
+		if (!is_wp_error($result)) {
 			$this->options->set_admin_notice ('User linked successfully', 'success');
 		} else {
 			$this->options->set_admin_notice ('User link failed', 'error');
+			$this->options->update ('data', $result, true);
 		}
 	}
 	

@@ -48,7 +48,8 @@ class bbz_test_form extends bbz_admin_form {
 						'product-filter'	=> 'Test product filter',
 						'load-auth'		=> 'Load Authorisation',
 						'delete-address'	=> 'Delete Zoho address (key=customer_id, value=address_id)',
-						'add-shipping-addresses' => 'Add a new shipping address (key=ALL or val=user id'
+						'add-shipping-addresses' => 'Add a new shipping address (key=ALL or val=user id',
+						'get_cross_sells'	=> 'Get all product cross sells',
 					)
 				),
 
@@ -242,8 +243,23 @@ class bbz_test_form extends bbz_admin_form {
 					$data['usermeta'] =	get_user_meta ($user_id);
 				}		
 				break;
-
-
+			case 'get_cross_sells';
+				// get list of product posts
+				$args = array (
+					'post_type' => 'product',	// only get product posts
+					'numberposts' => -1,
+					'fields' => 'ids',			// get all of the ids in an array
+				);
+				$product_posts = get_posts ( $args);
+				foreach ( $product_posts as $post_id ) {  // for each woo product
+					$product = wc_get_product ($post_id);
+					$csids = $product->get_cross_sell_ids();
+					if (!empty($csids)) {
+						$data[$post_id] = $csids;
+					}
+				}
+				break;
+			
 		}
 
 		if (!empty($data)){
@@ -265,6 +281,10 @@ class bbz_test_form extends bbz_admin_form {
 			echo '<br>No data returned';
 		}
 		$this->options->delete ('function', true);
+		
+		$data= array ('Options'=>$this->options->getall());
+		echo '<pre>'; print_r ($data); echo '</pre>';
+		
 		
 	}
 
