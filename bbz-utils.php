@@ -175,12 +175,13 @@ function bbz_update_products () {
 				update_post_meta ($post_id, BBZ_PM_ZOHO_ID, $item['zoho_id']);
 
 				$product->set_price ($item['rrp']);  //set active price
-				if (!empty ($item['orp']) && $item['orp'] >= $item['rrp']) { 
+				if (!empty ($item['orp']) && $item['orp'] > $item['rrp']) { 
 					// if an original price is set, (and greater than RRP) set RRP as sale price
 					$product->set_regular_price ($item['orp']);
 					$product->set_sale_price ($item['rrp']);
 				} else {
 					$product->set_regular_price ($item['rrp']);
+					$product->set_sale_price ('');  //make sure sale price is cleared
 				}
 				if (!empty ($item['tax_class']) && isset ($tax_class_map[$item['tax_class']]) ) {
 					$product->set_tax_class ($tax_class_map[$item['tax_class']]);
@@ -319,6 +320,9 @@ function bbz_update_cross_sells () {
 		);
 		$product_posts = get_posts ( $args);
 		$related = array();
+		$cross_sells = array();
+		
+		// Loop through all products, 
 		
 		foreach ( $product_posts as $post_id ) {  // for each woo product
 			$product = wc_get_product ($post_id);
@@ -348,66 +352,6 @@ function bbz_update_cross_sells () {
 			$product->set_cross_sell_ids($cross_sell_ids);
 			$product->save();
 		}
-		
 		return $cross_sells;
-
-		
 	}
-		
-						 
- 
-												  
-														 
-									   
- 
-		
- 
-									
-
-							  
-				 
-													  
-					   
-														 
-	
-									  
-					 
-  
-																   
-										
-										   
-						
-									
-										
-											
-	 
-	
-   
-  
-										  
-  
-												
-								   
-													 
-																					  
-									 
-	 
-	
-   
-  
-										   
-													   
-										
-												 
-					
-   
-  
-					  
-
-  
-  
-   
- 
- 
-
 ?>

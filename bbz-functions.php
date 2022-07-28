@@ -16,6 +16,51 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @donate $9     https://businessbloomer.com/bloomer-armada/
  */
  
+ 
+ /*****
+ * 	Add Twitter card meta to page header
+ *****/
+ 
+function bbz_add_twitter_card () {
+	if(is_single() || is_page() || is_product() ) {
+		$twitter_url    = get_permalink();
+		$twitter_title  = get_the_title();
+		$twitter_desc   = get_the_excerpt();
+		$twitter_thumbs = wp_get_attachment_image_src( get_post_thumbnail_id($post->ID), 'thumbnail' );
+		if(!$twitter_thumbs[0]) {
+			$twitter_thumb_url = 'https://bitternbooks.co.uk/wp-content/uploads/2019/11/Bittern-Logo-280x280.png';
+		} else {
+			$twitter_thumb_url = $twitter_thumbs[0];
+		}
+		
+	?><meta name="twitter:card" content="summary" />
+<meta name="twitter:url" content="<?php echo $twitter_url; ?>" />
+<meta name="twitter:title" content="<?php echo $twitter_title; ?>" />
+<meta name="twitter:description" content="<?php echo $twitter_desc; ?>" />
+<meta name="twitter:image" content="<?php echo $twitter_thumb_url; ?>" />
+<meta name="twitter:site" content="@BitternBooks" />
+<meta name="twitter:creator" content="@BitternBooks" />
+	<?php
+	 }
+}
+
+add_action('wp_head', 'bbz_add_twitter_card', 10);
+
+ /*****
+ *	Fix for Elementor not including structured data on single product page
+ 8
+ ******/
+ 
+function bbz_woocommerce_before_single_product() {
+ 
+    global $product;
+  
+    if(is_object($product)) {
+        //  call wc function to generate data - Elementor should do this !!!
+        WC()->structured_data->generate_product_data($product);
+    }
+}
+add_action('woocommerce_before_single_product', 'bbz_woocommerce_before_single_product', 10);
 
 /*********
 * Filter to add isbn to structured product data used by google
@@ -29,6 +74,22 @@ function bbz_structured_data_product_filter ( $markup, $product) {
 	if (strlen ($sku) == 13 & strpos ($sku, "978")===0) { // Only use sku as isbn if it has 13 chars starting 978
 		$markup['isbn'] =  $sku; // Set isbn to product sku.
 	}
+	$attribute_map = array (
+			"bookFormat"	=> 'format',
+			'numberOfPages'	=> 'pages',
+			'author'		=> 'author-2',
+			'publisher'		=> 'publisher',
+			'isPartOf'		=> 'series',
+			'position'		=> 'position',
+		);
+			
+	foreach ($attribute_map as $entname=>$slug) {
+		$attribute = $product->get_attribute ($slug);
+		if (!empty ($attribute) ) {
+			$markup [$entname] = $attribute;
+		}
+	}
+	
     return $markup;
 }
 // above doesn't work if RankMath plugin installed.  Try this

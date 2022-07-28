@@ -62,6 +62,8 @@ define ('BBZ_AVAIL_PRE', array ('Pre-order'));
 
 //Site options
 // BBZ_AUTO_CREATE_CONTACT - if true, create a contact when placing an order for a logged in user
+// This function has been implemented and tested, but switched off at the moment as would create too many
+// contacts in Zoho
 define ('BBZ_AUTO_CREATE_CONTACT', false);  
 
 
