@@ -22,25 +22,26 @@ if ( ! defined( 'ABSPATH' ) ) {
  *****/
  
 function bbz_add_twitter_card () {
-	if(is_single() || is_page() || is_product() ) {
+	global $post;
+	if (is_object($post) && (is_single() || is_page() || is_product() )) {
 		$twitter_url    = get_permalink();
 		$twitter_title  = get_the_title();
 		$twitter_desc   = get_the_excerpt();
 		$twitter_thumbs = wp_get_attachment_image_src( get_post_thumbnail_id($post->ID), 'thumbnail' );
-		if(!$twitter_thumbs[0]) {
+		if(!$twitter_thumbs) {
 			$twitter_thumb_url = 'https://bitternbooks.co.uk/wp-content/uploads/2019/11/Bittern-Logo-280x280.png';
 		} else {
 			$twitter_thumb_url = $twitter_thumbs[0];
 		}
 		
-	?><meta name="twitter:card" content="summary" />
+?><meta name="twitter:card" content="summary" />
 <meta name="twitter:url" content="<?php echo $twitter_url; ?>" />
 <meta name="twitter:title" content="<?php echo $twitter_title; ?>" />
 <meta name="twitter:description" content="<?php echo $twitter_desc; ?>" />
 <meta name="twitter:image" content="<?php echo $twitter_thumb_url; ?>" />
 <meta name="twitter:site" content="@BitternBooks" />
 <meta name="twitter:creator" content="@BitternBooks" />
-	<?php
+<?php
 	 }
 }
 
@@ -92,35 +93,31 @@ function bbz_structured_data_product_filter ( $markup, $product) {
 	
     return $markup;
 }
-// above doesn't work if RankMath plugin installed.  Try this
-/*
-add_filter( 'rank_math/snippet/rich_snippet_product_entity', "bbz_add_product_meta");
-function bbz_add_product_meta ( $entity ) {
-    if(is_product()){
-        global $product;
-		$sku = $product->get_sku();
-        if (strlen ($sku) == 13 & strpos ($sku, "978")===0) {
-              $entity['isbn'] = $sku;
-        }
-		$attribute_map = array (
-			"bookFormat"	=> 'format',
-			'numberOfPages'	=> 'pages',
-			'author'		=> 'author-2',
-			'publisher'		=> 'publisher',
-			'isPartOf'		=> 'series',
-			'position'		=> 'position',
-		);
-			
-		foreach ($attribute_map as $entname=>$slug) {
-			$attribute = $product->get_attribute ($slug);
-			if (!empty ($attribute) ) {
-				$entity [$entname] = $attribute;
-			}
+
+
+/********
+* Add user role to Google Analytics tracking
+*
+* - Assumes we are using Google Analytics Pro
+* - Custom dimensions must be set up in Google Analytics Admin/Property/Custom Dimensions
+*
+********/
+add_action( 'wc_google_analytics_pro_after_tracking_code_setup', 'bbz_add_google_tracking_code' );
+
+function bbz_add_google_tracking_code( $ga_function ) {
+
+// dimension1 - User Role
+	$role = 'guest';  //set default
+	if ( is_user_logged_in()) {
+		$user = wp_get_current_user();
+		if (is_object ($user) ) {
+			$user_roles = (array) $user->roles;
+			$role = $user_roles[0];
 		}
-    }
-    return $entity;
+	}
+	echo "{$ga_function}( 'set', 'dimension1', '$role' );";
 }
-*/
+
 /*********
  * Availability text filter
  *
@@ -165,8 +162,12 @@ add_filter( 'wwof_filter_product_item_action_controls', 'bbz_wwof_availability_f
 function bbz_wwof_availability_filter( $action_field, $product, $alternate ) {
 	// action field is html text for display in trade order form
 	$availability = get_post_meta ($product->get_id(), BBZ_PM_INACTIVE_REASON, true);
+	
+	// if item out of stock, replace string with availability field from zoho if set
 	if (strpos ($action_field, 'Out of Stock')!==false && is_string($availability)) {
 		$action_field = str_replace ("Out of Stock", $availability, $action_field);
+	
+	// if item on backorder, then replace action with pre-order or backorder as appropriate
 	} elseif ( strpos ($action_field, 'Add To Cart')!==false && $product->get_stock_status() == 'onbackorder') {
 		if (in_array ($availability, BBZ_AVAIL_PRE)) {
 			$action_field = str_replace ('Add To Cart', $availability, $action_field);
@@ -218,7 +219,7 @@ function bbz_product_original_price_filter ($html, $wsp, $price) {
  * @param array $rates Array of rates found for the package.
  * @return array
  */
- add_filter( 'woocommerce_package_rates', 'bbz_hide_shipping_when_free_is_available', 100 );
+add_filter( 'woocommerce_package_rates', 'bbz_hide_shipping_when_free_is_available', 100 );
 
 function bbz_hide_shipping_when_free_is_available( $rates ) {
 	$free = array();
@@ -232,35 +233,11 @@ function bbz_hide_shipping_when_free_is_available( $rates ) {
 }
 
 
-/*****
-* bbz_user_banner
-*
-* Places a banner at the top of the page before the main content
-* css user-banner defined in the theme custom css file
-*
-* This could be improved by making the text configurable through the admin interface
-******/
- 
-// add_action ( 'woocommerce_before_main_content', 'bbz_user_banner');
-add_action ( 'woocommerce_before_cart', 'bbz_user_banner');
-add_action ( 'woocommerce_before_checkout_form', 'bbz_user_banner');
-function bbz_user_banner() { 
-		
-	// Display on cart or checkout only, add other conditions here to display on more pages
-	if(is_cart() || is_checkout() ){ 
-		$roles = "";
-		$banner_text = "Free shipping for orders over £30";
-		if( bbz_is_wholesale_customer () ) {
-			$banner_text = "Free shipping for orders over £60";
-		}
-		echo '<div class="bbz-user-banner">'. $banner_text.'</div>';
-	}
-}
-
 /**
  * Order handling
  * Called when order is complete to post order in Zoho
- * (for testing call process_single_order, in live call order processing)
+ * For testing call bbz_process_single_order to process the order in line
+ * On the live site call bbz_order_processing to process in background and reduce waiting time
  */
 if ( BBZ_DEBUG ) {
 	add_action( 'woocommerce_thankyou', 'bbz_process_single_order');
@@ -327,9 +304,6 @@ function bbz_daily_user_update () {
 	bbz_load_sales_history ('all');
 	bbz_update_payment_terms ('all');
 }
-	
-
-
 
 // Change address placeholder text
 
@@ -359,6 +333,7 @@ function bbz_add_product_js() {
 	wp_enqueue_script('woo-ajax-add-to-cart');
 //      }
 }
+
 // Add affiliate links to permalinks.  works with Yith Woocommerce Affiliate plugin
 add_filter ('post_type_link', 'bbz_add_affiliate_ref', 10, 3);
 function bbz_add_affiliate_ref ($permalink, $post, $leavename) {
@@ -387,6 +362,7 @@ function bbz_affiliate_exclude_wholesale ($is_valid_token) {
 	}
 	return $is_valid_token;
 }
+
 // block paypal payment for wholsale user
 // not using the option built into wholesale pricing as this overrides the decision on whether to allow
 // payment on account.
@@ -411,8 +387,9 @@ function bbz_filter_available_payment_gateways( $available_gateways ) {
 	} else
 		return $available_gateways;
 }
+
 // Info message before payment options
-		// insert a message about credit availability
+// insert a message about credit availability
 //add_action ('woocommerce_review_order_before_payment', 'bbz_action_before_payment');
 function bbz_action_before_payment () {
 	if (bbz_is_wholesale_customer()) {
