@@ -338,6 +338,10 @@ class bbz_order {
 		$zoho_order ['payment_terms'] = $payment_terms ['days'];
 		$zoho_order ['notes'] = $this->order->get_customer_note();
 		$zoho_order ['delivery_method'] = $this->order->get_shipping_method();
+		// Flag priority orders with PRIORITY in the ref field
+		if (false !== stristr($zoho_order ['delivery_method'], 'priority')) {
+			$zoho_order ['reference_number'] = 'PRIORITY '.$zoho_order ['reference_number'];
+		}
 		if ($zoho_order ['discount'] == 0) unset ($zoho_order ['discount']);
 		if (empty ($zoho_order ['notes']) ) {
 			unset ($zoho_order ['notes']);

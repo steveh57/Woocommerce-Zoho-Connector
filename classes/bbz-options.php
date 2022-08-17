@@ -77,7 +77,7 @@ class bbz_options {
 	public function clear_admin_notice () {
 		unset ( $this->options['admin_notice'] );
 		unset ( $this->options['admin_message'] );
-		$this->save;
+		$this->save();
 		return true;
 	}
 

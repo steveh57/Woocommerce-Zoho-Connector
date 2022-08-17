@@ -18,40 +18,47 @@ if ( ! defined( 'ABSPATH' ) ) {
  
  
  /*****
- * 	Add Twitter card meta to page header
+ * 	Add Twitter card and facebbok meta to page header
  *****/
+add_action('wp_head', 'bbz_add_meta', 10);
  
-function bbz_add_twitter_card () {
+function bbz_add_meta () {
 	global $post;
 	if (is_object($post) && (is_single() || is_page() || is_product() )) {
-		$twitter_url    = get_permalink();
-		$twitter_title  = get_the_title();
-		$twitter_desc   = get_the_excerpt();
-		$twitter_thumbs = wp_get_attachment_image_src( get_post_thumbnail_id($post->ID), 'thumbnail' );
-		if(!$twitter_thumbs) {
-			$twitter_thumb_url = 'https://bitternbooks.co.uk/wp-content/uploads/2019/11/Bittern-Logo-280x280.png';
+		$meta_url    = wp_get_shortlink(); //get_permalink();
+		$meta_title  = get_the_title();
+		$meta_desc   = get_the_excerpt();
+		$meta_thumbs = wp_get_attachment_image_src( get_post_thumbnail_id($post->ID), 'thumbnail' );
+		if(!$meta_thumbs) {
+			$meta_thumb_url = 'https://bitternbooks.co.uk/wp-content/uploads/2019/11/Bittern-Logo-280x280.png';
 		} else {
-			$twitter_thumb_url = $twitter_thumbs[0];
+			$meta_thumb_url = $meta_thumbs[0];
 		}
-		
+/* Twitter tags unnecessary - Twitter accepts og tags which also work for Facebook
+<meta name="twitter:url" content="<?php echo $meta_url; ?>" />
+<meta name="twitter:title" content="<?php echo $meta_title; ?>" />
+<meta name="twitter:description" content="<?php echo $meta_desc; ?>" />
+<meta name="twitter:image" content="<?php echo $meta_thumb_url; ?>" />
+*/		
 ?><meta name="twitter:card" content="summary" />
-<meta name="twitter:url" content="<?php echo $twitter_url; ?>" />
-<meta name="twitter:title" content="<?php echo $twitter_title; ?>" />
-<meta name="twitter:description" content="<?php echo $twitter_desc; ?>" />
-<meta name="twitter:image" content="<?php echo $twitter_thumb_url; ?>" />
 <meta name="twitter:site" content="@BitternBooks" />
 <meta name="twitter:creator" content="@BitternBooks" />
+<meta name="og:url" content="<?php echo $meta_url; ?>" />
+<meta name="og:title" content="<?php echo $meta_title; ?>" />
+<meta name="og:description" content="<?php echo $meta_desc; ?>" />
+<meta name="og:image" content="<?php echo $meta_thumb_url; ?>" />
 <?php
 	 }
 }
 
-add_action('wp_head', 'bbz_add_twitter_card', 10);
+
 
  /*****
  *	Fix for Elementor not including structured data on single product page
  8
  ******/
- 
+add_action('woocommerce_before_single_product', 'bbz_woocommerce_before_single_product', 10);
+
 function bbz_woocommerce_before_single_product() {
  
     global $product;
@@ -61,10 +68,10 @@ function bbz_woocommerce_before_single_product() {
         WC()->structured_data->generate_product_data($product);
     }
 }
-add_action('woocommerce_before_single_product', 'bbz_woocommerce_before_single_product', 10);
+
 
 /*********
-* Filter to add isbn to structured product data used by google
+* Filter to add structured product data used by google
 *
 **********/
 
@@ -214,12 +221,11 @@ function bbz_product_original_price_filter ($html, $wsp, $price) {
 
 /**
  * Hide shipping rates when free shipping is available.
- * Updated to support WooCommerce 2.6 Shipping Zones.
  *
  * @param array $rates Array of rates found for the package.
  * @return array
  */
-add_filter( 'woocommerce_package_rates', 'bbz_hide_shipping_when_free_is_available', 100 );
+// add_filter( 'woocommerce_package_rates', 'bbz_hide_shipping_when_free_is_available', 100 );
 
 function bbz_hide_shipping_when_free_is_available( $rates ) {
 	$free = array();
@@ -418,6 +424,17 @@ function bbz_woocommerce_ship_to_destination ($checked) {
 	}
 	return $checked;
 }
+
+/*********
+* Remove product data tab from single product page
+*
+*/
  
+add_filter( 'woocommerce_product_tabs', 'bbz_filter_product_tabs', 98 );
+ 
+function bbz_filter_product_tabs ( $tabs ) {
+  unset( $tabs['additional_information'] ); // To remove the additional information tab
+  return $tabs;
+}
  
 ?>
