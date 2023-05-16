@@ -7,16 +7,28 @@
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
-/**
- * @snippet       WooCommerce Holiday/Pause Mode
- * @how-to        Get CustomizeWoo.com FREE
- * @sourcecode    https://businessbloomer.com/?p=20862
- * @author        Rodolfo Melogli
- * @testedwith    WooCommerce 3.5.1
- * @donate $9     https://businessbloomer.com/bloomer-armada/
+ 
+ /**
+ * Re-invokes certain WooCommerce hooks to activate the Ideal Postcodes address validation plugin on checkout
+ * Requires a shortcode "[add_ideal_postcodes]" to be added to the checkout page
+ *** Looks like this is not required as it gets invoked anyway on Elementor checkout form
  */
- 
- 
+//add_shortcode('add_ideal_postcodes', function(){
+    // Loads JavaScript and CSS assets
+//	do_action("ideal_postcodes_address_search");
+//});
+
+/*****
+* Restrict use of Frequently bought together to retail customers
+*****/
+
+add_filter ('woobt_show_items', 'bbz_frequently', 10, 2);
+
+function bbz_frequently ($items, $product_id) {
+	if (bbz_is_wholesale_customer()) return false;
+	return $items;
+}
+
  /*****
  * 	Add Twitter card and facebbok meta to page header
  *****/
@@ -100,7 +112,27 @@ function bbz_structured_data_product_filter ( $markup, $product) {
 	
     return $markup;
 }
+/********
+* Insert tag to support Google Analytics GA4 
+*
+* - Assumes we're using GA Pro
+* - Can remove this if we update GA Pro and it supprts GA4
+*
+********/
+add_action( 'wc_google_analytics_pro_before_tracking_code', 'bbz_add_ga4_tag' );
 
+function bbz_add_ga4_tag ( ) {
+?>
+<!-- GA4 tag from bbz-functions -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-L5E3PE17QW"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-L5E3PE17QW');
+</script>
+<?php
+}
 
 /********
 * Add user role to Google Analytics tracking
@@ -225,6 +257,7 @@ function bbz_product_original_price_filter ($html, $wsp, $price) {
  * @param array $rates Array of rates found for the package.
  * @return array
  */
+// removed to allow priority paid shipping option
 // add_filter( 'woocommerce_package_rates', 'bbz_hide_shipping_when_free_is_available', 100 );
 
 function bbz_hide_shipping_when_free_is_available( $rates ) {
@@ -347,7 +380,7 @@ function bbz_add_affiliate_ref ($permalink, $post, $leavename) {
 	if (class_exists('YITH_WCAF_Affiliate_Handler') ) {
 		$user_id = get_current_user_id();
 
-		if ( ! empty ($user_id)) {
+		if ( ! empty ($user_id) && !current_user_can('administrator')) {  // don't add affiliate ref for admin
 			$WCAF_handler = YITH_WCAF_Affiliate_Handler();
 			$affiliate = $WCAF_handler->get_affiliate_by_user_id ($user_id, $enabled=true, $exclude_banned=true);
 			if(!empty($affiliate)) {

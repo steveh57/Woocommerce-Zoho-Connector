@@ -60,6 +60,12 @@ define ('BBZ_AVAIL_OFF', array ('Out of print', 'Delisted', 'No longer available
 define ('BBZ_AVAIL_TEMP', array ('Reprinting', 'Temporarily unavailable', 'Pre-order'));  //Allows backorders on these items
 define ('BBZ_AVAIL_PRE', array ('Pre-order'));
 
+// Constants for Trackingmore connection
+define ('BBZ_TM_URL', 'https://api.trackingmore.com/v4/');
+define ('BBZ_TM_APIKEY', '671eugd-yazk-q76s-62ak-v2ypc7bxkryr');
+define ('BBZ_TM_TIMEOUT', 30);
+
+
 //Site options
 // BBZ_AUTO_CREATE_CONTACT - if true, create a contact when placing an order for a logged in user
 // This function has been implemented and tested, but switched off at the moment as would create too many

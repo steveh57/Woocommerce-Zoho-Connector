@@ -90,7 +90,9 @@ class bbz_admin_page {
 		// Display message from last action if set.
 		$this->render_admin_notice ();
 		
-		if ( empty ($this->options->get('redirect_uri'))) $this->options->update('redirect_uri', site_url(), true);
+		if ( empty ($this->options->get('redirect_uri'))) {
+			$this->options->update(array('redirect_uri'=>site_url()));
+		}
 		
 		switch ($active_tab) {
 			case 'setup':
@@ -132,7 +134,7 @@ class bbz_admin_page {
 	public function save() {
 		//echo '<pre>'; print_r ($_POST); echo '</pre>';
 
-		$this->options->reload;
+		$this->options->reload ();
 		
 		// Process return from one of our forms
 		if (isset( $_POST['form'] )) {
@@ -146,11 +148,7 @@ class bbz_admin_page {
 				$this->options->set_admin_notice ('Invalid form name '.$_POST['form'], 'error');
 			} else {
 				//echo 'post_data:<pre>'; print_r ($form->post_data()); echo '</pre>';
-				foreach ($form->post_data () as $key => $value) {
-						// If the above are valid, sanitize and save the option.
-					$this->options->update($key, $value);
-				}
-				$this->options->save();
+				$this->options->update($form->post_data());
 			}
 		}
 
@@ -168,7 +166,7 @@ class bbz_admin_page {
 //			exit();
 			if(isset($_REQUEST['code'])) {
 				$this->options->reload ();
-				$this->options->update('auth_code', $_REQUEST['code'], true);
+				$this->options->update(array('auth_code'=> $_REQUEST['code']));
 				
 				// now need to get access token and refresh token from Zoho
 				$request_url = ZOHO_AUTH_URL.'token';
@@ -194,15 +192,11 @@ class bbz_admin_page {
 						// var_dump ($content);
 						exit();
 					} else {
-						foreach ($content as $key => $value) {
-							$this->options->update($key, $value);
-						}
 						if (isset ($content['expires_in'])) {
 							// save time at which token expires (in seconds)
-							$this->options->update('token_expires', time() + $content['expires_in'] - 10);
+							$content['token_expires'] = time() + $content['expires_in'] - 10;
 						}
-						$this->options->save();
-						
+						$this->options->update($content);						
 					}
 				}
 				$this->redirect(admin_url('options-general.php?page=bbz-admin-page'));

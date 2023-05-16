@@ -275,7 +275,7 @@ class bbz_admin_form {
 					break;
 				case 'checkbox':
 					echo '<input type=checkbox';
-					if (isset($field['value']) & $field['value']=='on') {
+					if (isset($field['value']) && $field['value']=='on') {
 						echo ' checked';
 					}
 					echo ' name='.$field_id;
@@ -348,7 +348,7 @@ class bbz_admin_form {
 			// now load each field
 			foreach ($this->form['fields'] as $field_id => $field) {
 				// If the above are valid, sanitize and save the option.
-				if ( null !== wp_unslash( $_POST[$field_id] ) ) {
+				if ( isset ($_POST[$field_id] ) && null !== wp_unslash( $_POST[$field_id] ) ) {
 					$results[$field_id] = sanitize_text_field( $_POST[$field_id] );
 				} elseif ($field['type'] = 'checkbox') {  // special case for unset checkbox
 					$results[$field_id] = 'off';

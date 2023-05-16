@@ -209,7 +209,7 @@ class bbz_order {
 		//bbz_debug ($zoho_order, 'Order created', false);
 		//update_post_meta ($this->order->get_order_number(), 'zoho_order_id', $zoho_order_id);
 		
-		$this->order->add_meta_data ('zoho_order_id', $zoho_order_id);
+		$this->order->update_meta_data ('zoho_order_id', $zoho_order_id);  //use update just in case there's an existing order_id
 		$this->order->save();
 		
 		// if order is paid (excluding on account), create an invoice and payment record.
@@ -352,7 +352,11 @@ class bbz_order {
 		// Iterate Through Items
 		foreach ( $this->order->get_items() as $item_id=>$item ) {
 			$zoho_line = array();
-			$zoho_line ['item_id'] = get_post_meta ($item->get_product_id(), BBZ_PM_ZOHO_ID, true);
+			// Do we need the product id or the variation id?
+			$variation_id = $item->get_variation_id();
+			$post_id = $variation_id = 0 ? $item->get_product_id() : $variation_id;
+			$zoho_line ['item_id'] = get_post_meta ($post_id, BBZ_PM_ZOHO_ID, true);
+			
 			$zoho_line ['quantity'] = $item->get_quantity();
 			$zoho_line ['rate'] = $item->get_subtotal() / $zoho_line ['quantity'];
 			if ($zoho_line ['item_id'] !== false) {
