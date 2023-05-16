@@ -23,16 +23,56 @@ class bbz_options {
 		$this->options = get_option ( BBZ_OPTION_NAME);
 	}
 
+	/*******
+	*	get - get one or more options
+	*	$option	name of option, or array of option names
+	*	$select	'any' returns only matching options that are set
+	*			'all' returns false if any of the specified options are not set
+	******/
 	
-	public function get ($option_name='') {
-		return isset($this->options [$option_name]) ? $this->options [$option_name] : false;
+	public function get ($option, $select='any') {
+		if (is_array ($option) ) {
+			foreach ($option as $option_name) {
+				if (!isset ($this->options [$option_name])) {
+					if ($select == 'all') return false;
+				} else {
+					$result [$option_name] = $this->options [$option_name];
+				}
+			}
+			return $result;
+		} else {
+			return isset($this->options [$option]) ? $this->options [$option] : false;
+		}
 	}
+
+	/*******
+	*	is_set - check one or more options are set
+	*	$option	name of option, or array of option names
+	*	Returns true only if all specified options are set
+	******/	
+	public function is_set ($option) {  //if $option is an array, all options must be set to return true
+		if (is_array ($option) ) {
+			foreach ($option as $option_name) {
+				if (!isset ($this->options [$option_name])) return false;
+			}
+			return true;
+		} else {
+			return isset($this->options [$option]);
+		}
+	}
+	
 	public function getall () {
 		return $this->options;
 	}
+	/*******
+	*	update - update one or more options 
+	*	$option	array of option pairs
+	******/	
 	
-	public function update ($option_name='', $value, $save=false) {
-		$this->options [$option_name] = $value;
+	public function update ($option, $save=true) {
+		foreach ($option as $key=>$value) {
+			$this->options [$key] = $value;
+		}
 		if ($save) $this->save();
 	}
 	

@@ -74,8 +74,11 @@ function bbz_link_user ($user_id='', $zoho_id='') {  //$user is wp user object
 *******/
 function bbz_load_sales_history ($arg='') {
 	$zoho = new zoho_connector;
-	$sales_history = $zoho->get_sales_history();
-	if (is_array($sales_history)) {
+	$response = $zoho->get_sales_history(array ('2020','2021','2022', '2023'));
+	if (is_wp_error($response)) {
+		$response->add('bbz-zc-102', 'bbz_load_sales_history failed');
+			return $response;
+	} else {
 		$user_list = bbz_build_user_list ($arg);
 		// Now update user meta with sales history where applicable
 		$update_count = 0;
@@ -83,8 +86,8 @@ function bbz_load_sales_history ($arg='') {
 		foreach ($user_list as $user_id) {
 			$user_meta = new bbz_usermeta ($user_id);
 			$zoho_cust_id = $user_meta->get_zoho_id();
-			if (!empty ($zoho_cust_id) && isset($sales_history[$zoho_cust_id])) {
-				$user_meta->load_sales_history ($sales_history[$zoho_cust_id]);
+			if (!empty ($zoho_cust_id) && isset($response[$zoho_cust_id])) {
+				$user_meta->load_sales_history ($response[$zoho_cust_id]);
 				$update_count += 1;
 			}
 		}
@@ -164,80 +167,19 @@ function bbz_update_products () {
 		$update_count = 0;
 		foreach ( $product_posts as $post ) {  // for each woo product
 			$product = wc_get_product ($post);
-			$sku = $product->get_sku();
-			$post_id = $post->ID;
-			if ( !empty($sku) && isset ($items[$sku]) ) {	// have we got zoho data for this sku?
-				$item = $items[$sku];
-				//$items [ $sku ]['pid'] = $product->ID;
-
-				update_post_meta ($post_id, 'wholesale_customer_wholesale_price', $item['wsp']);
-				update_post_meta ($post_id, 'wholesale_customer_have_wholesale_price', 'yes');
-				update_post_meta ($post_id, BBZ_PM_ZOHO_ID, $item['zoho_id']);
-
-				$product->set_price ($item['rrp']);  //set active price
-				if (!empty ($item['orp']) && $item['orp'] > $item['rrp']) { 
-					// if an original price is set, (and greater than RRP) set RRP as sale price
-					$product->set_regular_price ($item['orp']);
-					$product->set_sale_price ($item['rrp']);
-				} else {
-					$product->set_regular_price ($item['rrp']);
-					$product->set_sale_price ('');  //make sure sale price is cleared
+			if ($product->is_type( 'variable' )) {
+				$children = $product->get_children();
+				foreach ($children as $key => $child_id) 
+				{ 
+					$product = wc_get_product ($child_id);
+					bbz_update_single_product ($product, $items);
+					$update_count += 1; 
 				}
-				if (!empty ($item['tax_class']) && isset ($tax_class_map[$item['tax_class']]) ) {
-					$product->set_tax_class ($tax_class_map[$item['tax_class']]);
-					$product->set_tax_status ('taxable');
-				}
-				if (!empty ($item['shipping_class']) && isset ($shipping_map[$item['shipping_class']]) ) {
-					$product->set_shipping_class_id ($shipping_map[$item['shipping_class']]);
-				}
-				$product->set_manage_stock (true) ;  // Ensure stock management enabled
-				if ($product->get_low_stock_amount() == 0) {
-					$product->set_low_stock_amount(3);  //set warning level to 3 if not set
-				}
-				if (!empty ($item ['availability'] )) update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
-				if ($item['status'] == 'active') {
-					// Set woo stock levels
-					// TODO: Enhance this by:
-					// Get Backorder SQL from Zoho Analytices to find stock requirements for open sales orders
-					// Subtract from 'available' stock figure to get true stock availability.
-				
-					$product->set_stock_quantity ($item['stock']);
-					
-					// Restrict out of stock items to wholesale, unless available to pre-order
-					if ($item['wholesale_only'] === 'Yes' || ($item['stock'] <= 0 && !in_array ($item ['availability'], BBZ_AVAIL_PRE ) )) {
-						update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
-					} else {
-						update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'all');
-					}			
-					// Only allow backorders for temp unavailable or pre order items that are out of stock	
-					// if availability is blank, assume out of stock is temporary and allow backorders
-					if ( empty ($item ['availability']) || in_array ($item ['availability'], BBZ_AVAIL_TEMP)) {
-						$product->set_backorders ('notify');
-					} else {
-						$product->set_backorders ('no');
-					}
-					$product->set_catalog_visibility ('visible'); 
-					
-
-				} else {  //product is inactive on zoho (not available)
-					$product->set_stock_quantity (0);
-					$product->set_backorders ('no');
-					$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
-					
-					update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
-
-				} 
-			} else {  //product is not listed on zoho (not available)
-					$product->set_stock_quantity (0);
-					$product->set_backorders ('no');
-					$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
-					update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
-
+			} else {
+				bbz_update_single_product ($product, $items);
+				$update_count += 1; 
 			}
-			
-			$product->save();
-			$update_count += 1; 
-		}	
+		}
 		wc_update_product_lookup_tables();  // update cache
 		wc_delete_product_transients();
 		return $update_count;
@@ -247,18 +189,101 @@ function bbz_update_products () {
 	}
 }
 
+function bbz_update_single_product ($product, $items) {
+
+	$post_id = $product->get_id();
+	$sku = $product->get_sku();
+	if ( !empty($sku) && isset ($items[$sku]) ) {	// have we got zoho data for this sku?
+		$item = $items[$sku];
+		//$items [ $sku ]['pid'] = $product->ID;
+
+		update_post_meta ($post_id, 'wholesale_customer_wholesale_price', $item['wsp']);
+		update_post_meta ($post_id, 'wholesale_customer_have_wholesale_price', 'yes');
+		update_post_meta ($post_id, BBZ_PM_ZOHO_ID, $item['zoho_id']);
+
+		$product->set_price ($item['rrp']);  //set active price
+		if (!empty ($item['orp']) && $item['orp'] > $item['rrp']) { 
+			// if an original price is set, (and greater than RRP) set RRP as sale price
+			$product->set_regular_price ($item['orp']);
+			$product->set_sale_price ($item['rrp']);
+		} else {
+			$product->set_regular_price ($item['rrp']);
+			$product->set_sale_price ('');  //make sure sale price is cleared
+		}
+		if (!empty ($item['tax_class']) && isset ($tax_class_map[$item['tax_class']]) ) {
+			$product->set_tax_class ($tax_class_map[$item['tax_class']]);
+			$product->set_tax_status ('taxable');
+		}
+		if (!empty ($item['shipping_class']) && isset ($shipping_map[$item['shipping_class']]) ) {
+			$product->set_shipping_class_id ($shipping_map[$item['shipping_class']]);
+		}
+		$product->set_manage_stock (true) ;  // Ensure stock management enabled
+		if ($product->get_low_stock_amount() == 0) {
+			$product->set_low_stock_amount(3);  //set warning level to 3 if not set
+		}
+		if (!empty ($item ['availability'] )) update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
+		if ($item['status'] == 'active') {
+			// Set woo stock levels
+			// TODO: Enhance this by:
+			// Get Backorder SQL from Zoho Analytices to find stock requirements for open sales orders
+			// Subtract from 'available' stock figure to get true stock availability.
+		
+			$product->set_stock_quantity ($item['stock']);
+			
+			// Restrict out of stock items to wholesale, unless available to pre-order
+			if ($item['wholesale_only'] === 'Yes' || ($item['stock'] <= 0 && !in_array ($item ['availability'], BBZ_AVAIL_PRE ) )) {
+				update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
+			} else {
+				update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'all');
+			}			
+			// Only allow backorders for temp unavailable or pre order items that are out of stock	
+			// if availability is blank, assume out of stock is temporary and allow backorders
+			if ( empty ($item ['availability']) || in_array ($item ['availability'], BBZ_AVAIL_TEMP)) {
+				$product->set_backorders ('notify');
+			} else {
+				$product->set_backorders ('no');
+			}
+			$product->set_catalog_visibility ('visible'); 
+			
+
+		} else {  //product is inactive on zoho (not available)
+			$product->set_stock_quantity (0);
+			$product->set_backorders ('no');
+			$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
+			
+			update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
+
+		} 
+	} else {  //product is not listed on zoho (not available)
+			$product->set_stock_quantity (0);
+			$product->set_backorders ('no');
+			$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
+			update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
+
+	}
+	
+	$product->save();
+}
 
 function bbz_debug ($data, $title='', $exit=true) {
 	if ( BBZ_DEBUG ) {
-		if (is_null ($data)) {
-			$data = 'NULL';
-		} elseif ($data===false) {
-			$data = 'FALSE';
-		} elseif (empty($data)){
-			$data = 'NO DATA';
-		}
 		echo '<br>', $title, '<pre>';
-		print_r ($data);
+		if (is_wp_error ($data) ) {
+			$codes = $data->get_error_codes();
+			foreach ($codes as $error_code) {
+				echo 'Error: '.$error_code.' -> '.$data->get_error_message ($error_code)."\n";
+				echo 'Error data: <pre>'.print_r ($data->get_error_data ($error_code), true)."</pre>\n";
+			}
+		} else {
+			if (is_null ($data)) {
+				$data = 'NULL';
+			} elseif ($data===false) {
+				$data = 'FALSE';
+			} elseif (empty($data)){
+				$data = 'NO DATA';
+			}
+			print_r ($data);
+		}
 		echo '</pre>';
 		if ($exit) exit;
 	}
@@ -297,9 +322,17 @@ function bbz_is_wholesale_customer ($user_id = '') {
 
 function bbz_email_admin ($subject, $message) {
 	bbz_debug (array ('Subject'=>$subject, 'Message'=>$message), 'Email to Admin');
+	if (is_wp_error ($message) ) {
+		$data = $message;
+		$message = '';
+		$codes = $data->get_error_codes();
+		foreach ($codes as $error_code) {
+			$message .= 'Error: '.$error_code.' -> '.$data->get_error_message ($error_code)."\n";
+			$message .= 'Error data: <pre>'.print_r ($data->get_error_data ($error_code), true)."</pre>\n";
+		}
+	}					
 	$admin_email = get_option ('admin_email');
 	wp_mail ($admin_email, $subject, $message);
-
 }
 /*******
 *	bbz_update_cross_sells 

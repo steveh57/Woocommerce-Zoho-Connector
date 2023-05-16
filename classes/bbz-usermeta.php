@@ -125,6 +125,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	private function get_product_index () {
 		// $bbz-product_index is a global defined in bbz_definitions
+		global $bbz_product_index;
 		if (empty ($bbz_product_index)) {  // load index from product meta if necessary
 			// get list of product posts and build index of zoho_id to post_id
 			$args = array (

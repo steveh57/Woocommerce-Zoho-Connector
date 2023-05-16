@@ -50,6 +50,8 @@ class bbz_test_form extends bbz_admin_form {
 						'delete-address'	=> 'Delete Zoho address (key=customer_id, value=address_id)',
 						'add-shipping-addresses' => 'Add a new shipping address (key=ALL or val=user id',
 						'get_cross_sells'	=> 'Get all product cross sells',
+						'get_shipmentorders' => 'Get shipment orders',
+						'load_shipments_from_zoho' => 'Load shipments db from zoho',
 					)
 				),
 
@@ -97,8 +99,18 @@ class bbz_test_form extends bbz_admin_form {
 		if (empty ( $function )) return false;
 		echo '<h2>Results for "'.$function.'"</h2>';
 		$zoho = new zoho_connector;
-		echo '<br>Connection '.( $zoho->connected ? 'successful' : 'failed').'<br>';
-		switch ($function) {
+		if (is_wp_error ($zoho->connected)) {
+			$data = $zoho->connected;
+			echo '<br>Connection failed<br>';
+			$codes = $data->get_error_codes();
+			foreach ($codes as $error_code) {
+				echo 'Error: '.$error_code.' -> '.$data->get_error_message ($error_code)."\n";
+				echo 'Error data: <pre>'.print_r ($data->get_error_data ($error_code), true)."</pre>\n";
+			}
+		} else {
+			echo '<br>Connection successful<br>';
+		}
+			switch ($function) {
 
 			case 'get-itemdata':
 				$data = $zoho->get_items();
@@ -143,11 +155,20 @@ class bbz_test_form extends bbz_admin_form {
 				break;
 
 			case 'get-sales-history':
-				$data = $zoho->get_sales_history();
+				$data = $zoho->get_sales_history(array ('2020','2021','2022', '2023'));
 				break;
 			
 			case 'get_salesorder':
 				$data = $zoho->get_salesorder ($dataset, $filter);
+				break;
+				
+			case 'get_shipmentorders':
+				$zoho_so = new zoho_shipmentorders;
+				if ($filterkey == 'shipment_id') {
+					$data= $zoho_so->get_shipmentorder_by_id ($filtervalue);
+				} else{
+					$data = $zoho_so->get_shipmentorders ($filter);
+				}
 				break;
 				
 			case 'product-filter':
@@ -187,7 +208,7 @@ class bbz_test_form extends bbz_admin_form {
 				break;
 				
 			case 'set-option':
-				$this->options->update ($filterkey, $filtervalue, true);
+				$this->options->update ($filter);
 				$data = $this->options->getall();
 				break;
 				
@@ -196,20 +217,13 @@ class bbz_test_form extends bbz_admin_form {
 				break;
 				
 			case 'get-analytics':
-				$response = $zoho->get_analytics ($dataset, $filter);
-				if (is_array($response)) {
-//						echo 'Response: <pre>'; print_r ($response); echo '</pre>';
-					echo 'Headers: <pre>'; print_r ($response['headers']); echo '</pre>';
-					echo 'Body: <pre>'; print_r (json_decode ($response['body'], true)); echo '</pre>';
-				} else {
-					echo '<br>No data returned';
-				}
-				$data = false;
+				$data = $zoho->get_analytics ($dataset, $filter);
 				break;
 			
 			case 'show-order':
 				$order_id = $filterkey;
-				$data = wc_get_order($order_id);// ($order_id);
+				$data['order'] = wc_get_order($order_id);// ($order_id);
+				$data['items'] = $data['order']->get_items();
 				//$data = array ($order_id=>$order->get_data());
 				break;
 			
@@ -259,9 +273,13 @@ class bbz_test_form extends bbz_admin_form {
 					}
 				}
 				break;
-			
-		}
-
+			case 'load_shipments_from_zoho':
+				$data = bbz_load_shipments_from_zoho();
+				break;
+				
+			}
+		
+		
 		if (!empty($data)){
 			if (is_wp_error ($data) ) {
 				$codes = $data->get_error_codes();
@@ -280,7 +298,9 @@ class bbz_test_form extends bbz_admin_form {
 		} else {
 			echo '<br>No data returned';
 		}
+		$this->options->reload();
 		$this->options->delete ('function', true);
+
 		
 		$data= array ('Options'=>$this->options->getall());
 		echo '<pre>'; print_r ($data); echo '</pre>';

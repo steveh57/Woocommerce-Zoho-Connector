@@ -66,9 +66,8 @@ define ('BBZ_AVAIL_PRE', array ('Pre-order'));
 // contacts in Zoho
 define ('BBZ_AUTO_CREATE_CONTACT', false);  
 
-
+// Product index - used to translate zoho product id to wp post id in user meta and sales history
 global $bbz_product_index;  //make global to avoid reloading
 $bbz_product_index = array();
-
 
 ?>
