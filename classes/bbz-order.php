@@ -354,7 +354,7 @@ class bbz_order {
 			$zoho_line = array();
 			// Do we need the product id or the variation id?
 			$variation_id = $item->get_variation_id();
-			$post_id = $variation_id = 0 ? $item->get_product_id() : $variation_id;
+			$post_id = $variation_id == 0 ? $item->get_product_id() : $variation_id;
 			$zoho_line ['item_id'] = get_post_meta ($post_id, BBZ_PM_ZOHO_ID, true);
 			
 			$zoho_line ['quantity'] = $item->get_quantity();

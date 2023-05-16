@@ -206,10 +206,14 @@ function bbz_update_single_product ($product, $items) {
 			// if an original price is set, (and greater than RRP) set RRP as sale price
 			$product->set_regular_price ($item['orp']);
 			$product->set_sale_price ($item['rrp']);
+			
 		} else {
 			$product->set_regular_price ($item['rrp']);
 			$product->set_sale_price ('');  //make sure sale price is cleared
 		}
+		// Load discont string in post meta
+		update_post_meta ($post_id, BBZ_PM_WHOLESALE_DISCOUNT, number_format(100*(1-($item['wsp']/$item['rrp'])),1).'%');
+		
 		if (!empty ($item['tax_class']) && isset ($tax_class_map[$item['tax_class']]) ) {
 			$product->set_tax_class ($tax_class_map[$item['tax_class']]);
 			$product->set_tax_status ('taxable');
@@ -221,6 +225,20 @@ function bbz_update_single_product ($product, $items) {
 		if ($product->get_low_stock_amount() == 0) {
 			$product->set_low_stock_amount(3);  //set warning level to 3 if not set
 		}
+		// load dimension and weight data
+		if (!empty ($item['dimension_unit']) && $item['dimension_unit'] == 'cm' &&
+			!empty($item['length']) && !empty($item['width']) && !empty($item['height'])) {
+			$product->set_length($item['length']);
+			$product->set_width($item['width']);
+			$product->set_height($item['height']);
+			//create dimension string for display in product data
+			update_post_meta ($post_id, BBZ_PM_DIMENSION_STRING, $item['length'].'cm x '.$item['width'].'cm');
+		}
+		if (!empty ($item['weight_unit']) &&  !empty($item['weight'])) { //could be g or kg
+			if ($item['weight_unit'] == 'g') $product->set_weight ($item['weight']/1000);
+			elseif ($item['weight_unit'] == 'kg') $product->set_weight ($item['weight']);
+		}
+			
 		if (!empty ($item ['availability'] )) update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
 		if ($item['status'] == 'active') {
 			// Set woo stock levels

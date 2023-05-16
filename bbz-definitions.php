@@ -40,7 +40,8 @@ define ('BBZ_PM_ZOHO_ID', 'zoho_item_id');
 define ('BBZ_PM_WHOLESALE_PRICE', 'wholesale_customer_wholesale_price');
 define ('BBZ_PM_HAVE_WHOLESALE_PRICE', 'wholesale_customer_have_wholesale_price');
 define ('BBZ_PM_INACTIVE_REASON', 'bbz_inactive_reason');
-
+define ('BBZ_PM_WHOLESALE_DISCOUNT', 'bbz_wholesale_discount');
+define ('BBZ_PM_DIMENSION_STRING', 'bbz_dimension_string');
 
 // User meta tags
 define ('BBZ_UM_ZOHO_ID', 'zoho_contact_id');
