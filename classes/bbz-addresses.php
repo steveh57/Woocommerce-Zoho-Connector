@@ -90,8 +90,8 @@ class bbz_addresses {
 	
 	// Zoho will reject addresses containing certain characters, use this list to eliminate them.
 	private function zoho_clean ($input_string) {
-		$bad = array("&", "$", "%", "#", "<", ">", "|");
-		$replace = array (' and ', '', '', '', '', '', ' ');
+		$bad = array("&", "$", "%", "#", "<", ">", "|", "=");
+		$replace = array (' and ', '', '', '', '', '', ' ', '-');
 		return str_replace($bad, $replace, $input_string);
 	}
 	
