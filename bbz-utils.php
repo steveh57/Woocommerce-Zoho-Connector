@@ -76,7 +76,7 @@ function bbz_load_sales_history ($arg='') {
 	$zoho = new zoho_connector;
 	$response = $zoho->get_sales_history(array ('2020','2021','2022', '2023'));
 	if (is_wp_error($response)) {
-		$response->add('bbz-zc-102', 'bbz_load_sales_history failed');
+		$response->add('bbz-ut-003', 'bbz_load_sales_history failed');
 			return $response;
 	} else {
 		$user_list = bbz_build_user_list ($arg);
@@ -110,7 +110,12 @@ function bbz_update_payment_terms ( $arg='') {
 				
 		if (!empty ($zoho_cust_id)) {
 			$zoho_contact = $zoho->get_contact_by_id ( $zoho_cust_id);
-			if (! empty ( $zoho_contact )) {
+			if (is_wp_error ($zoho_contact)) {
+				$zoho_contact->add ('bbz-ut-004', 'In bbz_link_user', array (
+					'user_id'=>$user_id,
+					'$zoho_id'=>$zoho_cust_id) );
+				$this->bbz_email_admin ("Failed to update user payment terms", $zoho_contact);
+			} else {
 				$user_meta->load_payment_terms ($zoho_contact);
 				$update_count += 1;
 			}
@@ -227,10 +232,10 @@ function bbz_update_single_product ($product, $items) {
 		}
 		// load dimension and weight data
 		if (!empty ($item['dimension_unit']) && $item['dimension_unit'] == 'cm' &&
-			!empty($item['length']) && !empty($item['width']) && !empty($item['height'])) {
+			!empty($item['length']) && !empty($item['width'])) {
 			$product->set_length($item['length']);
 			$product->set_width($item['width']);
-			$product->set_height($item['height']);
+			if (!empty($item['height'])) $product->set_height($item['height']);
 			//create dimension string for display in product data
 			update_post_meta ($post_id, BBZ_PM_DIMENSION_STRING, $item['length'].'cm x '.$item['width'].'cm');
 		}

@@ -56,6 +56,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		// send request to zoho
 		$response = wp_remote_post ($request_url, $request_args);
 		if (!is_array ($response)) {
+			if (isset($request_args['header']['Authorization'])) {  // cut authtoken for security
+				$request_args['header']['Authorization'] = substr($request_args['header']['Authorization'],0,20).' OBSCURED';
+			}
 			return new WP_Error ('bbz-zc-102', 'Zoho refresh token failed', array(
 				'request_url'=>$request_url,
 				'request_args'=> $request_args,
@@ -139,6 +142,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 			// analytics only returns a code if it fails
 			// code=0 = success
 			if (isset($zoho_data['code']) && $zoho_data['code'] !== 0 ) {
+				if (isset($request_args['header']['Authorization'])) {  // cut authtoken for security
+					$request_args['header']['Authorization'] = substr($request_args['header']['Authorization'],0,20).' OBSCURED';
+				}
 				return new WP_Error ('bbz-zc-003', 'Error returned from request to Zoho_books', array(
 					'request url'=>$request_url,
 					'request args'=>$request_args,
