@@ -318,7 +318,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	
 		$zoho_data = $this->get_books ('contacts/'.$zoho_id);
 		if (is_wp_error($zoho_data)) {
-			$zoho_data->add ('bbz-zcon-007', 'get_contact_by_id failed', $zoho_data);
+			$zoho_data->add ('bbz-zcon-007', 'get_contact_by_id failed');
 			return $zoho_data;
 		}
 		

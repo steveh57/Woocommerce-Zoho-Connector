@@ -86,10 +86,12 @@ class bbz_action_form extends bbz_admin_form {
 			break;  // this is dealt with in display_data
 		
 		case 'update-users':
-			$result= bbz_load_sales_history('all');  //update sales history  all linked users
-			if ($result) $result = bbz_update_payment_terms('all');
-			if (! $result) {
-				$this->options>set_admin_notice ('Sales history load failed', 'error');
+			$user_id = $this->options->get('filterkey');
+			if (empty ($user_id) ) $user_id = 'all';
+			$result= bbz_load_sales_history($user_id);  //update sales history  all linked users
+			if (!is_wp_error ($result) ) $result = bbz_update_payment_terms($user_id);
+			if (is_wp_error ($result) ) {
+				$this->options->set_admin_notice ('Sales history load failed', 'error');
 			} else {
 				$this->options->set_admin_notice ($result.' users updated', 'success');
 			}
@@ -128,7 +130,14 @@ class bbz_action_form extends bbz_admin_form {
 			$result = bbz_update_cross_sells();
 			break;
 		}
-
+		if (is_wp_error ($result) ) {
+			$codes = $result->get_error_codes();
+			foreach ($codes as $error_code) {
+				echo 'Error: '.$error_code.' -> '.$result->get_error_message ($error_code)."\n";
+				echo 'Error data: <pre>'.print_r ($result->get_error_data ($error_code), true)."</pre>\n";
+			}
+			exit;
+		}				
 
 	}
 
