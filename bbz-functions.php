@@ -336,14 +336,30 @@ function bbz_process_orders ($resubmit=false) {
 // some error handling to notify admin if it fails would be a good idea...
 
 add_action ('bbz_daily_cron', 'bbz_daily_user_update');
-add_action ('bbz_daily_cron', 'bbz_update_products');  // function in bbz_utils
+add_action ('bbz_daily_cron', 'bbz_daily_product_update');  // function in bbz_utils
 add_action ('bbz_daily_cron', 'bbz_update_cross_sells');  // update reciprocal cross sells (in bbz-utils)
 
 function bbz_daily_user_update () {
-	bbz_load_sales_history ('all');
-	bbz_update_payment_terms ('all');
+	$result = bbz_load_sales_history ('all');
+	if (is_wp_error($result)) {
+		bbz_email_admin ('Daily User Update failed', $result);
+		return;
+	}
+	$result = bbz_update_payment_terms ('all');
+	if (is_wp_error($result)) {
+		bbz_email_admin ('Daily User Update failed', $result);
+		return;
+	}
+	bbz_email_admin ('Daily user updates completed');
 }
 
+function bbz_daily_product_update () {
+	$result = bbz_update_products ('all');
+	if (is_wp_error($result)) {
+		bbz_email_admin ('Daily Product Update failed', $result);
+	}
+	bbz_email_admin ('Daily product updates completed');
+}
 // Change address placeholder text
 
 add_filter('woocommerce_default_address_fields', 'override_address_fields');

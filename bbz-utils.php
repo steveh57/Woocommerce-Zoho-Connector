@@ -113,8 +113,8 @@ function bbz_update_payment_terms ( $arg='') {
 			if (is_wp_error ($zoho_contact)) {
 				$zoho_contact->add ('bbz-ut-004', 'In bbz_link_user', array (
 					'user_id'=>$user_id,
-					'$zoho_id'=>$zoho_cust_id,
-					'update_count' => $update_count) );
+					'zoho_id'=>$zoho_cust_id,
+					'Updates completed' => $update_count) );
 				return $zoho_contact;
 			} else {
 				$user_meta->load_payment_terms ($zoho_contact);
@@ -161,7 +161,10 @@ function bbz_update_products () {
 	// get zoho item data
 	$zoho = new zoho_connector;
 	$items = $zoho->get_items();
-	if (is_array($items)) {
+	if (is_wp_error ($items)) {
+		$items->add ('bbz-ut-005', 'In bbz_update_products' );
+		return $items;
+	} elseif (is_array($items)) {
 	
 		// get list of product posts
 		$args = array (
@@ -191,7 +194,7 @@ function bbz_update_products () {
 		return $update_count;
 //			echo '<pre>'; print_r ($items); echo '</pre>';
 	} else {
-		return false;
+		return new WP_Error ('bbz-ut-006', 'Invalid items format returned', $items);
 	}
 }
 
@@ -344,7 +347,7 @@ function bbz_is_wholesale_customer ($user_id = '') {
 	return false;
 }
 
-function bbz_email_admin ($subject, $message) {
+function bbz_email_admin ($subject, $message='') {
 	bbz_debug (array ('Subject'=>$subject, 'Message'=>$message), 'Email to Admin');
 	if (is_wp_error ($message) ) {
 		$data = $message;
