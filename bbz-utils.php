@@ -97,33 +97,33 @@ function bbz_load_sales_history ($arg='') {
 }
 
 // Update payment terms in user meta from zoho contact data
-// Run daily from bbz-functions cron
-function bbz_update_payment_terms ( $arg='') {
-	$user_list = bbz_build_user_list ($arg);
-	$update_count = 0;
-	$zoho = new zoho_connector;
+// Run when user enters checkout page
 
-	foreach ($user_list as $user_id) {
+function bbz_update_payment_terms ($user_id='') {
 
+	if (empty($user_id) ) $user_id = get_current_user_id();
+	
+	if ($user_id !== 0) {
 		$user_meta = new bbz_usermeta ($user_id);
 		$zoho_cust_id = $user_meta->get_zoho_id();
-				
 		if (!empty ($zoho_cust_id)) {
+		
+			$zoho = new zoho_connector;
 			$zoho_contact = $zoho->get_contact_by_id ( $zoho_cust_id);
 			if (is_wp_error ($zoho_contact)) {
-				$zoho_contact->add ('bbz-ut-004', 'In bbz_link_user', array (
+				$zoho_contact->add ('bbz-ut-004', 'In bbz_update_payment_terms', array (
 					'user_id'=>$user_id,
-					'zoho_id'=>$zoho_cust_id,
-					'Updates completed' => $update_count) );
+					'zoho_id'=>$zoho_cust_id) );
 				return $zoho_contact;
 			} else {
 				$user_meta->load_payment_terms ($zoho_contact);
-				$update_count += 1;
+				return true;
 			}
 		}
 	}
-	return $update_count;
+	return false;
 }
+
 /*******
 *
 * Update products from Zoho

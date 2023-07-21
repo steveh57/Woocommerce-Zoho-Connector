@@ -18,7 +18,7 @@ define ('BBZ_PATH', dirname( __FILE__ ));
 define ('BBZ_CLASSPATH', BBZ_PATH . '/classes' );
 define ('BBZ_ASSETSPATH', BBZ_PATH . '/assets' );
 include_once ( BBZ_PATH . '/bbz-definitions.php');
-include_once ( BBZ_PATH . '/bbz-utils.php');
+include_once ( BBZ_PATH . '/bbz-utils.php');		// utility functions
 include_once ( BBZ_CLASSPATH . '/bbz-usermeta.php');
 include_once ( BBZ_CLASSPATH . '/bbz-addresses.php');
 include_once ( BBZ_CLASSPATH . '/bbz-options.php');
@@ -33,6 +33,7 @@ include_once ( BBZ_CLASSPATH . '/bbz-admin-page.php');
 include_once ( BBZ_PATH . '/bbz-wwlc-filters.php');
 include_once ( BBZ_PATH . '/bbz-wwof-filters.php');
 include_once ( BBZ_PATH . '/bbz-functions.php');  // miscellaneous actions and filter functions
+include_once ( BBZ_PATH . '/bbz-cron.php');		// daily and hourly cron functions
 
 
 // Submenu class
