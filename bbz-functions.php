@@ -388,5 +388,15 @@ function bbz_filter_product_tabs ( $tabs ) {
   unset( $tabs['additional_information'] ); // To remove the additional information tab
   return $tabs;
 }
+
+/********
+* Extend remember me period
+*
+*/
+function bbz_remember_me_expiration( $expiration ) {
+    return 86400 * BBZ_LOGGED_IN_DAYS; // number of seconds
+}
+add_filter( 'auth_cookie_expiration', 'bbz_remember_me_expiration' );
+
  
 ?>

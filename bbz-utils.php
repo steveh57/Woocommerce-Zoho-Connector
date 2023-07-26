@@ -357,7 +357,9 @@ function bbz_email_admin ($subject, $message='') {
 			$message .= 'Error: '.$error_code.' -> '.$data->get_error_message ($error_code)."\n";
 			$message .= 'Error data: <pre>'.print_r ($data->get_error_data ($error_code), true)."</pre>\n";
 		}
-	}					
+	} elseif (empty($message)) {
+		$message = $subject;
+	}
 	$admin_email = get_option ('admin_email');
 	wp_mail ($admin_email, $subject, $message);
 }
