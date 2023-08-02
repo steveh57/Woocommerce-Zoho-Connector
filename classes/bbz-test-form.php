@@ -24,7 +24,7 @@ class bbz_test_form extends bbz_admin_form {
 					'options'	=> array (
 						'get-dataset'	=>	'Get specified Books dataset',
 						'get-analytics'	=>	'Get specified Analytics dataset',
-						'get-itemdata'		=>	'Item Data',
+						'get-itemdata'		=>	'Get Zoho items',
 						'get-shipping-classes' => 'Get wc shippng classes',
 						'call-function'		=> 'Call function filterkey(filtervalue)',
 						'get-product-detail'	=> 'Call product function (key=product_id, value=function)',

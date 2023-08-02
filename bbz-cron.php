@@ -69,11 +69,14 @@ function bbz_daily_user_update () {
 }
 
 function bbz_daily_product_update () {
-	$result = bbz_update_products ('all');
+	$products = new bbz_products;
+	$result = $products->update_all();
 	if (is_wp_error($result)) {
 		bbz_email_admin ('Daily Product Update failed', $result);
+	} else {
+		$result['missing-products'] = $products->get_missing_items();
+		bbz_email_admin ('Daily product updates completed', $result);
 	}
-	bbz_email_admin ('Daily product updates completed');
 }
 
 
