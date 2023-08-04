@@ -75,12 +75,12 @@ class bbz_products {
 				{ 
 					$product = wc_get_product ($child_id);
 					$result = $this->update_single ($product);
-					if (!empty ($result)) $warnings[] = $result;
+					if (!empty ($result)) $warnings[$child_id] = $result;
 					$update_count += 1; 
 				}
 			} else {
 				$result = $this->update_single ($product);
-				if (!empty ($result)) $warnings[] = $result;
+				if (!empty ($result)) $warnings[$product->get_id()] = $result;
 				$update_count += 1; 
 			}
 		}
@@ -190,7 +190,7 @@ class bbz_products {
 		if (!empty ($warnings)) {
 			$warnings [] = "Title: " . $product->get_title();
 			$warnings [] = "SKU: $sku";
-		return array ( $post_id => $warnings);
+		return $warnings;
 		}
 	}
 	/*****

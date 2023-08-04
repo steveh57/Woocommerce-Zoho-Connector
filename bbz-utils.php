@@ -192,6 +192,8 @@ function bbz_email_admin ($subject, $message='') {
 		}
 	} elseif (empty($message)) {
 		$message = $subject;
+	} elseif (!is_string($message) ) {
+		$message = print_r($message, true);
 	}
 	$admin_email = get_option ('admin_email');
 	wp_mail ($admin_email, $subject, $message);

@@ -398,5 +398,23 @@ function bbz_remember_me_expiration( $expiration ) {
 }
 add_filter( 'auth_cookie_expiration', 'bbz_remember_me_expiration' );
 
+/********
+* Display cart weight totals
+*
+*/
+function bbz_cart_weight () {
+		$cart_weight = WC()->cart->get_cart_contents_weight();
+		
+		?>
+<tr class="total-weight">
+	<th>Total Weight</th>
+	<td data-title="Total Weight"><?php echo esc_html( wc_format_weight( $cart_weight ) ); ?></td>
+</tr>
+<?php
+}
+
+add_action ('woocommerce_cart_totals_after_order_total', 'bbz_cart_weight');
+add_action ('woocommerce_review_order_after_order_total', 'bbz_cart_weight');
+
  
 ?>
