@@ -337,6 +337,10 @@ class bbz_order {
 		$zoho_order ['payment_terms_label'] = $payment_terms ['name'];
 		$zoho_order ['payment_terms'] = $payment_terms ['days'];
 		$zoho_order ['notes'] = $this->order->get_customer_note();
+		if (!empty($zoho_order ['notes'] )) {
+			// alert order processing to presence of customer notes
+			$zoho_order ['reference_number'] .= ' SEE NOTES';
+		}
 		$zoho_order ['delivery_method'] = $this->order->get_shipping_method();
 		// Flag priority orders with PRIORITY in the ref field
 		if (false !== stristr($zoho_order ['delivery_method'], 'priority')) {
