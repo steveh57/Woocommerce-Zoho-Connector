@@ -5,7 +5,8 @@
     Description:    Elements to link Bittern Books website to Zoho
     Author:         Steve Haines
     Author URI:     http://www.unilake.co.uk/
-    Version:        2.0817
+    Version:        2.3.8
+	Release Date:	16/8/23
     Requirements:   PHP 5.2.4 or above, WordPress 3.4 or above.
 */
 
@@ -17,7 +18,7 @@ define ('BBZ_PATH', dirname( __FILE__ ));
 define ('BBZ_CLASSPATH', BBZ_PATH . '/classes' );
 define ('BBZ_ASSETSPATH', BBZ_PATH . '/assets' );
 include_once ( BBZ_PATH . '/bbz-definitions.php');
-include_once ( BBZ_PATH . '/bbz-utils.php');
+include_once ( BBZ_PATH . '/bbz-utils.php');		// utility functions
 include_once ( BBZ_CLASSPATH . '/bbz-usermeta.php');
 include_once ( BBZ_CLASSPATH . '/bbz-addresses.php');
 include_once ( BBZ_CLASSPATH . '/bbz-options.php');
@@ -29,9 +30,11 @@ include_once ( BBZ_CLASSPATH . '/bbz-test-form.php');
 include_once ( BBZ_CLASSPATH . '/bbz-linkuser-form.php');
 include_once ( BBZ_CLASSPATH . '/bbz-action-form.php');
 include_once ( BBZ_CLASSPATH . '/bbz-admin-page.php');
+include_once ( BBZ_CLASSPATH . '/bbz-products.php');
 include_once ( BBZ_PATH . '/bbz-wwlc-filters.php');
 include_once ( BBZ_PATH . '/bbz-wwof-filters.php');
 include_once ( BBZ_PATH . '/bbz-functions.php');  // miscellaneous actions and filter functions
+include_once ( BBZ_PATH . '/bbz-cron.php');		// daily and hourly cron functions
 
 
 // Submenu class

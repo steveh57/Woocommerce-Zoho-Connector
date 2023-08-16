@@ -76,8 +76,8 @@ function bbz_load_sales_history ($arg='') {
 	$zoho = new zoho_connector;
 	$response = $zoho->get_sales_history(array ('2020','2021','2022', '2023'));
 	if (is_wp_error($response)) {
-		$response->add('bbz-zc-102', 'bbz_load_sales_history failed');
-			return $response;
+		$response->add('bbz-ut-003', 'bbz_load_sales_history failed');
+		return $response;
 	} else {
 		$user_list = bbz_build_user_list ($arg);
 		// Now update user meta with sales history where applicable
@@ -97,172 +97,32 @@ function bbz_load_sales_history ($arg='') {
 }
 
 // Update payment terms in user meta from zoho contact data
-// Run daily from bbz-functions cron
-function bbz_update_payment_terms ( $arg='') {
-	$user_list = bbz_build_user_list ($arg);
-	$update_count = 0;
-	$zoho = new zoho_connector;
+// Run when user enters checkout page
 
-	foreach ($user_list as $user_id) {
+function bbz_update_payment_terms ($user_id='') {
 
+	if (empty($user_id) ) $user_id = get_current_user_id();
+	
+	if ($user_id !== 0) {
 		$user_meta = new bbz_usermeta ($user_id);
 		$zoho_cust_id = $user_meta->get_zoho_id();
-				
 		if (!empty ($zoho_cust_id)) {
+		
+			$zoho = new zoho_connector;
 			$zoho_contact = $zoho->get_contact_by_id ( $zoho_cust_id);
-			if (! empty ( $zoho_contact )) {
+			if (is_wp_error ($zoho_contact)) {
+				$zoho_contact->add ('bbz-ut-004', 'In bbz_update_payment_terms', array (
+					'user_id'=>$user_id,
+					'zoho_id'=>$zoho_cust_id) );
+				return $zoho_contact;
+			} else {
 				$user_meta->load_payment_terms ($zoho_contact);
-				$update_count += 1;
+				return true;
 			}
 		}
 	}
-	return $update_count;
-}
-/*******
-*
-* Update products from Zoho
-*
-* Fetches product data from Zoho and uses it to update product pricing and availability,
-* tax class and shipping class if specified in zoho.
-*
-* Note that this overrides various product settings in woocommerce with data from Zoho
-* - Price
-* - Sale Price (if ORP set in Zoho)
-* - Wholesale price
-* - Tax Class
-* - Tax Status
-* - Shipping class (if set in Zoho)
-* - Stock level
-* - Backorder setting
-* - Catalog visibility
-* - Wholesale visibility
-* 
-*******/
-function bbz_update_products () {
-	$tax_class_map = array (
-		'Standard Rate'	=> '',
-		'Reduced Rate'	=> 'reduced-rate',
-		'Zero Rate'		=> 'zero-rate'
-	);
+	return false;
 
-	// Buiid shipping map name=>id
-	$shipping= new WC_shipping();
-	$shipping_map = array();
-	foreach ($shipping->get_shipping_classes() as $shipping_class) {
-		$shipping_map [$shipping_class->name] = $shipping_class->term_id;
-	}
-	
-	// get zoho item data
-	$zoho = new zoho_connector;
-	$items = $zoho->get_items();
-	if (is_array($items)) {
-	
-		// get list of product posts
-		$args = array (
-			'post_type' => 'product',	// only get product posts
-			'numberposts' => -1,		// get all of them
-		);
-		$product_posts = get_posts ( $args);
-		
-		$update_count = 0;
-		foreach ( $product_posts as $post ) {  // for each woo product
-			$product = wc_get_product ($post);
-			if ($product->is_type( 'variable' )) {
-				$children = $product->get_children();
-				foreach ($children as $key => $child_id) 
-				{ 
-					$product = wc_get_product ($child_id);
-					bbz_update_single_product ($product, $items);
-					$update_count += 1; 
-				}
-			} else {
-				bbz_update_single_product ($product, $items);
-				$update_count += 1; 
-			}
-		}
-		wc_update_product_lookup_tables();  // update cache
-		wc_delete_product_transients();
-		return $update_count;
-//			echo '<pre>'; print_r ($items); echo '</pre>';
-	} else {
-		return false;
-	}
-}
-
-function bbz_update_single_product ($product, $items) {
-
-	$post_id = $product->get_id();
-	$sku = $product->get_sku();
-	if ( !empty($sku) && isset ($items[$sku]) ) {	// have we got zoho data for this sku?
-		$item = $items[$sku];
-		//$items [ $sku ]['pid'] = $product->ID;
-
-		update_post_meta ($post_id, 'wholesale_customer_wholesale_price', $item['wsp']);
-		update_post_meta ($post_id, 'wholesale_customer_have_wholesale_price', 'yes');
-		update_post_meta ($post_id, BBZ_PM_ZOHO_ID, $item['zoho_id']);
-
-		$product->set_price ($item['rrp']);  //set active price
-		if (!empty ($item['orp']) && $item['orp'] > $item['rrp']) { 
-			// if an original price is set, (and greater than RRP) set RRP as sale price
-			$product->set_regular_price ($item['orp']);
-			$product->set_sale_price ($item['rrp']);
-		} else {
-			$product->set_regular_price ($item['rrp']);
-			$product->set_sale_price ('');  //make sure sale price is cleared
-		}
-		if (!empty ($item['tax_class']) && isset ($tax_class_map[$item['tax_class']]) ) {
-			$product->set_tax_class ($tax_class_map[$item['tax_class']]);
-			$product->set_tax_status ('taxable');
-		}
-		if (!empty ($item['shipping_class']) && isset ($shipping_map[$item['shipping_class']]) ) {
-			$product->set_shipping_class_id ($shipping_map[$item['shipping_class']]);
-		}
-		$product->set_manage_stock (true) ;  // Ensure stock management enabled
-		if ($product->get_low_stock_amount() == 0) {
-			$product->set_low_stock_amount(3);  //set warning level to 3 if not set
-		}
-		if (!empty ($item ['availability'] )) update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
-		if ($item['status'] == 'active') {
-			// Set woo stock levels
-			// TODO: Enhance this by:
-			// Get Backorder SQL from Zoho Analytices to find stock requirements for open sales orders
-			// Subtract from 'available' stock figure to get true stock availability.
-		
-			$product->set_stock_quantity ($item['stock']);
-			
-			// Restrict out of stock items to wholesale, unless available to pre-order
-			if ($item['wholesale_only'] === 'Yes' || ($item['stock'] <= 0 && !in_array ($item ['availability'], BBZ_AVAIL_PRE ) )) {
-				update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
-			} else {
-				update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'all');
-			}			
-			// Only allow backorders for temp unavailable or pre order items that are out of stock	
-			// if availability is blank, assume out of stock is temporary and allow backorders
-			if ( empty ($item ['availability']) || in_array ($item ['availability'], BBZ_AVAIL_TEMP)) {
-				$product->set_backorders ('notify');
-			} else {
-				$product->set_backorders ('no');
-			}
-			$product->set_catalog_visibility ('visible'); 
-			
-
-		} else {  //product is inactive on zoho (not available)
-			$product->set_stock_quantity (0);
-			$product->set_backorders ('no');
-			$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
-			
-			update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
-
-		} 
-	} else {  //product is not listed on zoho (not available)
-			$product->set_stock_quantity (0);
-			$product->set_backorders ('no');
-			$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
-			update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
-
-	}
-	
-	$product->save();
 }
 
 function bbz_debug ($data, $title='', $exit=true) {
@@ -320,7 +180,7 @@ function bbz_is_wholesale_customer ($user_id = '') {
 	return false;
 }
 
-function bbz_email_admin ($subject, $message) {
+function bbz_email_admin ($subject, $message='') {
 	bbz_debug (array ('Subject'=>$subject, 'Message'=>$message), 'Email to Admin');
 	if (is_wp_error ($message) ) {
 		$data = $message;
@@ -330,7 +190,12 @@ function bbz_email_admin ($subject, $message) {
 			$message .= 'Error: '.$error_code.' -> '.$data->get_error_message ($error_code)."\n";
 			$message .= 'Error data: <pre>'.print_r ($data->get_error_data ($error_code), true)."</pre>\n";
 		}
-	}					
+	} elseif (empty($message)) {
+		$message = $subject;
+	} elseif (!is_string($message) ) {
+		$message = print_r($message, true);
+	}
+
 	$admin_email = get_option ('admin_email');
 	wp_mail ($admin_email, $subject, $message);
 }

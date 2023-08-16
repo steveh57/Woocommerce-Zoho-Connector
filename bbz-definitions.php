@@ -40,7 +40,8 @@ define ('BBZ_PM_ZOHO_ID', 'zoho_item_id');
 define ('BBZ_PM_WHOLESALE_PRICE', 'wholesale_customer_wholesale_price');
 define ('BBZ_PM_HAVE_WHOLESALE_PRICE', 'wholesale_customer_have_wholesale_price');
 define ('BBZ_PM_INACTIVE_REASON', 'bbz_inactive_reason');
-
+define ('BBZ_PM_WHOLESALE_DISCOUNT', 'bbz_wholesale_discount');
+define ('BBZ_PM_DIMENSION_STRING', 'bbz_dimension_string');
 
 // User meta tags
 define ('BBZ_UM_ZOHO_ID', 'zoho_contact_id');
@@ -72,9 +73,10 @@ define ('BBZ_TM_TIMEOUT', 30);
 // contacts in Zoho
 define ('BBZ_AUTO_CREATE_CONTACT', false);  
 
+DEFINE ('BBZ_LOGGED_IN_DAYS', 90); // Set number of days users remain logged in for when they check 'remember me'
 
+// Product index - used to translate zoho product id to wp post id in user meta and sales history
 global $bbz_product_index;  //make global to avoid reloading
 $bbz_product_index = array();
-
 
 ?>

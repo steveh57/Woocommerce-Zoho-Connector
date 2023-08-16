@@ -75,21 +75,24 @@ class bbz_action_form extends bbz_admin_form {
 		$this->options->reload ();
 		switch ($this->options->get('function')) {
 		case 'update-products':
-			$result= bbz_update_products();
-			if (! $result) {
+			$products = new bbz_products;
+			$result = $products->update_all();
+			if (is_wp_error ($result)) {
 				$this->options->set_admin_notice ('Product update failed', 'error');
 			} else {
-				$this->options->set_admin_notice ($result.' Products Updated', 'success');
+				$this->options->set_admin_notice ($result['update-count'].' Products Updated', 'success');
 			}
 			break;
 		case 'check-products':
 			break;  // this is dealt with in display_data
 		
 		case 'update-users':
-			$result= bbz_load_sales_history('all');  //update sales history  all linked users
-			if ($result) $result = bbz_update_payment_terms('all');
-			if (! $result) {
-				$this->options>set_admin_notice ('Sales history load failed', 'error');
+			$user_id = $this->options->get('filterkey');
+			if (empty ($user_id) ) $user_id = 'all';
+			$result= bbz_load_sales_history($user_id);  //update sales history  all linked users
+			if (!is_wp_error ($result) ) $result = bbz_update_payment_terms($user_id);
+			if (is_wp_error ($result) ) {
+				$this->options->set_admin_notice ('Sales history load failed', 'error');
 			} else {
 				$this->options->set_admin_notice ($result.' users updated', 'success');
 			}
@@ -128,7 +131,14 @@ class bbz_action_form extends bbz_admin_form {
 			$result = bbz_update_cross_sells();
 			break;
 		}
-
+		if (is_wp_error ($result) ) {
+			$codes = $result->get_error_codes();
+			foreach ($codes as $error_code) {
+				echo 'Error: '.$error_code.' -> '.$result->get_error_message ($error_code)."\n";
+				echo 'Error data: <pre>'.print_r ($result->get_error_data ($error_code), true)."</pre>\n";
+			}
+			exit;
+		}				
 
 	}
 
@@ -137,7 +147,8 @@ class bbz_action_form extends bbz_admin_form {
 		switch ($this->options->get('function')) {
 			case 'check-products':
 			case 'update-products':
-				$data = $this->get_missing_items();
+				$products = new bbz_products;
+				$data = $products->get_missing_items();
 				if (is_array($data)) {
 					echo '<h2>Missing Products</h2>';
 					echo 'The following items are not present on the website:<br>';
@@ -153,43 +164,6 @@ class bbz_action_form extends bbz_admin_form {
 		}
 		$this->options->delete('function', true);
 
-	}
-	/*****
-	* GET MISSING ITEMS
-	*
-	* get list of items not present in woocommerce
-	* returns array isbn => name
-	*****/
-	private function get_missing_items() {
-	
-		//get list of zoho items indexed by sku
-		$zoho = new zoho_connector;
-		$items = $zoho->get_items();
-		if (is_array($items)) {
-			// get list of product posts
-			$args = array (
-				'post_type' => 'product',	// only get product posts
-				'numberposts' => -1,		// get all of them
-			);
-			$products = get_posts ( $args);
-			$index = array();
-			//build index of sku => product_id
-			foreach ( $products as $product ) {
-				$sku = get_post_meta ($product->ID, '_sku', $single=true);	// sku is in meta data
-				if ( !('' == $sku) ) {
-					$index [$sku] = $product->ID;
-				}
-			}
-			// if item sku from zoho is not in product list
-			foreach ($items as $sku=>$item) {
-				if (!isset ($index[$sku]) && $item['status']=='active') {
-					$results [$sku] = $item['name'];
-				}
-			}
-			return $results;
-		} else {
-			return false;
-		}
 	}
 	
 	// update all users with a zoho id with addresses from zoho.

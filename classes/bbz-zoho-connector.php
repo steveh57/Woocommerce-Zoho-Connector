@@ -47,7 +47,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 			'shipping_class'	=>	'cf_shipping_class_unformatted',	// shipping class code
 			'wholesale_only'	=> 'cf_wholesale_only_unformatted',	// Yes or No or blank
 			'availability'	=> 'cf_inactive_reason_unformatted',
-			
+			'length'	=> 'length',
+			'width'		=> 'width',
+			'height'	=> 'height',
+			'weight'	=> 'weight',
+			'weight_unit' => 'weight_unit',	// might be g or kg
+			'dimension_unit' => 'dimension_unit' //usually cm
 		);
 		if (! $this->isconnected() ) return false;
 		
@@ -313,7 +318,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	
 		$zoho_data = $this->get_books ('contacts/'.$zoho_id);
 		if (is_wp_error($zoho_data)) {
-			$zoho_data->add ('bbz-zcon-007', 'get_contact_by_id failed', $zoho_data);
+			$zoho_data->add ('bbz-zcon-007', 'get_contact_by_id failed');
 			return $zoho_data;
 		}
 		
