@@ -26,6 +26,9 @@ if ( ! wp_next_scheduled( 'bbz_daily_cron' ) ) {
 /******
 * Order processing
 * Called as a cron job to process any new orders to be sent to zoho and check if any are completed
+* Note wc_get_orders defaults to a limit set by 'posts per page' setting - usually 10.  Could by 
+* overridden by adding 'limit'=>xx to arg array - xx=-1 for unlimited.
+*
 *****/
 
 add_action ('bbz_hourly_cron', 'bbz_process_orders');

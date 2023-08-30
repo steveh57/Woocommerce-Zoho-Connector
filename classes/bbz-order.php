@@ -491,22 +491,73 @@ class bbz_order {
 			return $response;
 		}
 		$shipments = array();
-		if (in_array($response ['shipped_status'], array('shipped', 'partially_shipped', 'fulfilled'))) {  // order shipped
+		$shipment_status = $response ['shipped_status'];
+		$carrier_map = array (
+			'Royal Mail' =>  array ('RM', 'Royal mail'),
+			'DX Delivery' => array ('DX', 'dx', 'Dx'),
+			);
+		// If AST PRO plugin is Installed
+		if ( class_exists( 'WC_Advanced_Shipment_Tracking_Actions' ) ) {
+			$ast_supported_providers = array();
+			$ast = WC_Advanced_Shipment_Tracking_Actions::get_instance();
+			if (method_exists ($ast, 'get_providers')) {
+				foreach ($ast->get_providers () as $slug=>$provider) {
+					$ast_supported_providers[] = $provider['provider_name'];
+				}
+			}
+		}
+		//bbz_debug ($ast_supported_providers);
+	
+		if (in_array($shipment_status, array('shipped', 'partially_shipped', 'fulfilled'))) {  // order shipped
+			$shipments = $this->order->get_meta ('zoho_shipments');
+			if (empty($shipments)) $shipments = array();
 			// collect shipment data and save to order - could be used in email to customer
 			foreach ($response ['packages'] as $package) {
-				$shipments [] = array (
-					'package_number' => $package ['package_number'],
-					'shipment_number' => $package['shipment_number'],
-					'shipment_date' => $package ['shipment_date'],
-					'carrier' => $package ['carrier'],
-					'service' => $package ['service'],
-					'tracking_number' => $package ['tracking_number'],
-				);
+				if (!isset($shipments[$package['shipment_number']])) {
+					// this is a new shipment record
+					$carrier = $package ['carrier'];
+					// clean up carrier field
+					foreach ($carrier_map as $clean_carrier=>$alias_list) {
+						foreach ($alias_list as $alias) {
+							if (str_contains ($carrier, $alias)) {
+								$carrier = $clean_carrier;
+								break 2;
+							}
+						}
+					}
+					//  add shipment to array for local storage
+					$shipments [$package['shipment_number']] = array (
+						'package_id' => $package ['package_id'],
+						'package_number' => $package ['package_number'],
+						'shipment_id' => $package['shipment_id'],
+						'shipment_date' => $package ['shipment_date'],
+						'carrier' => $carrier,
+						'service' => $package ['service'],
+						'tracking_number' => $package ['tracking_number'],
+						'shipment_date' => $package ['shipment_date'],
+						);
+					// If AST PRO plugin is Installed
+					if ( class_exists( 'WC_Advanced_Shipment_Tracking_Actions' )) {
+						if (function_exists( 'ast_insert_tracking_number' ) && in_array ($carrier, $ast_supported_providers)) {
+							ast_insert_tracking_number( 
+								$this->order->get_id(), 
+								$package ['tracking_number'],
+								$carrier, 
+								$package ['shipment_date'],
+								in_array($shipment_status, array('shipped', 'fulfilled')) ? 1 : 2); //status 1 = shipped, 2 = partial
+						}
+					}
+				}
 			}
-			if (!empty ($shipments)) $this->order->update_meta_data ('zoho_shipments', $shipments);
 			
+			// save zoho shipment details to order meta
+			if (!empty ($shipments)) $this->order->update_meta_data ('zoho_shipments', $shipments);
+
 			//update order status - should trigger email to customer
-			$this->order->set_status ('completed');
+			if ( !class_exists( 'WC_Advanced_Shipment_Tracking_Actions' ) ) {
+				$this->order->set_status ('shipped');
+			} elseif ($shipment_status == 'delivered') $this->order->set_status ('delivered');
+			
 			$this->order->save();
 		}
 	

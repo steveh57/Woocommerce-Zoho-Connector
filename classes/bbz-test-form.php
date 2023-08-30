@@ -50,8 +50,10 @@ class bbz_test_form extends bbz_admin_form {
 						'delete-address'	=> 'Delete Zoho address (key=customer_id, value=address_id)',
 						'add-shipping-addresses' => 'Add a new shipping address (key=ALL or val=user id',
 						'get_cross_sells'	=> 'Get all product cross sells',
-						'get_shipmentorders' => 'Get shipment orders',
-						'load_shipments_from_zoho' => 'Load shipments db from zoho',
+						'get_shipmentorders' => 'Get shipment orders (key=id (optional),value=status)',
+						'get_packages' 		=> 'Get packages (key=id (optional),value=status)',
+						'update_shipment_status' => 'Update Zoho shipment status (key=id, val=status)',
+						'update_shipment_test' => 'Test update_shipmentorder function',
 					)
 				),
 
@@ -162,15 +164,6 @@ class bbz_test_form extends bbz_admin_form {
 				$data = $zoho->get_salesorder ($dataset, $filter);
 				break;
 				
-			case 'get_shipmentorders':
-				$zoho_so = new zoho_shipmentorders;
-				if ($filterkey == 'shipment_id') {
-					$data= $zoho_so->get_shipmentorder_by_id ($filtervalue);
-				} else{
-					$data = $zoho_so->get_shipmentorders ($filter);
-				}
-				break;
-				
 			case 'product-filter':
 				$args = array();
 				$args ['post__in'][] = $filtervalue;
@@ -273,8 +266,49 @@ class bbz_test_form extends bbz_admin_form {
 					}
 				}
 				break;
-			case 'load_shipments_from_zoho':
-				$data = bbz_load_shipments_from_zoho();
+				
+			case 'get_shipmentorders':
+				$zoho_so = new zoho_shipmentorders;
+				if (!empty($filterkey)) {
+					$data= $zoho_so->get_shipmentorder_by_id ($filterkey);
+				} else{
+					$data = $zoho_so->get_shipmentorders_by_status ($filtervalue);
+				}
+				break;
+				
+			case 'get_packages':
+				$zoho_so = new zoho_shipmentorders;
+				if (!empty($filterkey)) {
+					$data= $zoho_so->get_package_by_id ($filterkey);
+				} else{
+					$data = $zoho_so->get_packages_by_status ($filtervalue);
+				}
+				break;
+				
+			case 'update_shipment_test':
+				$zoho_so = new zoho_shipmentorders;
+				if (!empty($filterkey)) {
+					$package= $zoho_so->get_package_by_id ($filterkey);
+					if(is_wp_error($package)) break;
+					$shipment = $package['shipment_order'];
+					$shipment['date'] = $shipment['shipping_date'];
+					$shipment['package_id'] = $package['package_id'];
+					$shipment['salesorder_id'] = $package['salesorder_id'];
+					$shipment['shipment_sub_status'] = $filtervalue;
+					$data = $zoho_so->update_shipmentorder ($shipment);
+					if(is_wp_error($data) ) {
+						$data->add('test-001', 'shipment update error', $package);
+					}
+				}
+				break;
+				
+			case 'update_shipment_status':
+				$zoho_so = new zoho_shipmentorders;
+				if (in_array ($filtervalue, array ('shipped', 'delivered') ) ) {
+					$data = $zoho_so->update_status ($filterkey, $filtervalue);
+				} else {
+					$data = $zoho_so->update_status ($filterkey, 'shipped', $filtervalue);
+				}
 				break;
 				
 			}
