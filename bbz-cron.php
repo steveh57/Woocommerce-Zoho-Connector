@@ -33,7 +33,9 @@ if ( ! wp_next_scheduled( 'bbz_daily_cron' ) ) {
 
 add_action ('bbz_hourly_cron', 'bbz_process_orders');
 function bbz_process_orders ($resubmit=false) {
-	$orders = wc_get_orders (array ('status'=>'processing'));
+	$orders = wc_get_orders (array (
+		'status'=>array('processing', 'completed'),
+		'limit' => 30));
 	foreach ($orders as $order) {
 		$bbz_order = new bbz_order ($order);
 		if ( empty($bbz_order->get_zoho_order_id())) {

@@ -554,10 +554,10 @@ class bbz_order {
 			if (!empty ($shipments)) $this->order->update_meta_data ('zoho_shipments', $shipments);
 
 			//update order status - should trigger email to customer
-			if ( !class_exists( 'WC_Advanced_Shipment_Tracking_Actions' ) ) {
+			/*if ( !class_exists( 'WC_Advanced_Shipment_Tracking_Actions' ) ) {
 				$this->order->set_status ('shipped');
 			} elseif ($shipment_status == 'delivered') $this->order->set_status ('delivered');
-			
+			*/
 			$this->order->save();
 		}
 	
