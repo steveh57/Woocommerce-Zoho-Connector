@@ -88,15 +88,21 @@ class bbz_order {
 	private $user_meta;
 	private $user_id;
 	private $order;
+	private $order_id;
 	private $options;
 	private $guest=false;
 	private $zoho_cust_id;
+	private $on_zoho;
 	
 	function __construct ($order) {
 		$this->order = wc_get_order( $order );
+		//if ('WC_Order' !== get_class ($this->order)) $this->order = null;
 		if (empty($this->order) ) {
 			return false;
 		}
+		$this->order_id = $this->order->get_id();
+		$this->on_zoho = $this->order->meta_exists (BBZ_PM_ZOHO_ORDER_ID);
+		//bbz_debug ('on_zoho testing '.BBZ_PM_ZOHO_ORDER_ID, $this->on_zoho?'true':'false');
 		$this->options = new bbz_options;
 		// Three situations:
 		// 1. Guest user - user not logged in, or web user not linked to zoho
@@ -118,10 +124,23 @@ class bbz_order {
 		
 	}
 	
-	public function get_zoho_order_id () {
-		return $this->order->get_meta ('zoho_order_id', true);
+	public function is_on_zoho() {
+		return $this->on_zoho;
 	}
-		
+	
+	public function get_zoho_order_id () {
+		if (empty($this->order) || false == $this->on_zoho ) {
+			return false;
+		}
+		return $this->order->get_meta (BBZ_PM_ZOHO_ORDER_ID, true);
+	}
+	
+	public function get_date_created () {
+		if (empty($this->order) || false == $this->on_zoho ) {
+			return false;
+		}
+		return $this->order->get_date_created();
+	}
 		
 	
 	/******
@@ -140,10 +159,11 @@ class bbz_order {
 		}
 		
 		// check that order hasn't already been sent - can be called twice if user refreshes page
-		if (!$resubmit && !empty($this->order->get_meta ('zoho_order_id', true))) {
+		if (!$resubmit && false == $this->on_zoho) {
 			return new WP_Error ('bbz-ord-002', 'Order has already been submitted to Zoho', array ('order'=>$this->order));
 		}
 		
+
 		// Get the address id
 		$bbz_addresses = new bbz_addresses ($this->user_id);
 		$shipto = $this->order->get_address ('shipping');
@@ -160,7 +180,7 @@ class bbz_order {
 		if ($this->guest) {
 			if (empty($this->zoho_cust_id)) {
 				$error = new WP_Error ('bbz-ord-003', 'No guest customer linked');
-				$this->notify_admin ("Failed to create Zoho order", $error);
+				//$this->notify_admin ("Failed to create Zoho order", $error);
 				return $error; // no guest customer linked - can't process order
 			}
 			$payment_terms = array (
@@ -175,7 +195,7 @@ class bbz_order {
 				if (is_wp_error ($result)) {
 					$result->add ('bbz-ord-004', 'Process_order failed', array (
 						'order'=>$this->order) );
-					$this->notify_admin ("Failed to create Zoho order", $result);
+					//$this->notify_admin ("Failed to create Zoho order", $result);
 					return $result;
 				}
 				$this->zoho_cust_id = $result ['contact_id'];
@@ -191,7 +211,7 @@ class bbz_order {
 			$zoho_address_id->add('bbz-ord-005', 'Unable to get Zoho address id', array (
 				'shipto'=> $shipto,
 				'bbz_addresses'=>$bbz_addresses));
-			$this->notify_admin ("Failed to create Zoho order", $zoho_address_id);
+			//$this->notify_admin ("Failed to create Zoho order", $zoho_address_id);
 			return $zoho_address_id;
 		}
 		
@@ -201,7 +221,7 @@ class bbz_order {
 			$response->add ('bbz-ord-006', 'Unable to create Zoho order', array(
 				"Zoho Customer ID"=>$this->zoho_cust_id,
 				"Zoho Address ID"=>$zoho_address_id));
-			$this->notify_admin ("Failed to create Zoho order", $response);
+			//$this->notify_admin ("Failed to create Zoho order", $response);
 			return $response;
 		}
 		$zoho_order = $response;
@@ -210,6 +230,7 @@ class bbz_order {
 		//update_post_meta ($this->order->get_order_number(), 'zoho_order_id', $zoho_order_id);
 		
 		$this->order->update_meta_data ('zoho_order_id', $zoho_order_id);  //use update just in case there's an existing order_id
+		$this->on_zoho = true;
 		$this->order->save();
 		
 		// if order is paid (excluding on account), create an invoice and payment record.
@@ -227,7 +248,7 @@ class bbz_order {
 			if (is_wp_error ($response) ) {
 				$response->add ('bbz-ord-007', 'Unable to create Zoho invoice', array(
 					"Zoho Order"=>$zoho_order));
-				$this->notify_admin ("Failed to create Zoho invoice for order", $response);
+				//$this->notify_admin ("Failed to create Zoho invoice for order", $response);
 				return $response;
 			}
 			$zoho_invoice = $response;
@@ -235,7 +256,7 @@ class bbz_order {
 			if (is_wp_error ($response) ) {
 				$response->add ('bbz-ord-008', 'Unable to create Zoho payment', array(
 					"Zoho invoice"=>$zoho_invoice));
-				$this->notify_admin ("Failed to create Zoho payment for order", $response);
+				//$this->notify_admin ("Failed to create Zoho payment for order", $response);
 				return $response;
 			}
 		
@@ -245,7 +266,7 @@ class bbz_order {
 				if (is_wp_error ($response) ) {
 					$response->add ('bbz-ord-009', 'Unable to delete Zoho guest address',
 						array (	'order'=>$this->order->get_order_number())	);
-					$this->notify_admin ("Failed to delete Zoho guest address", $response);
+					//$this->notify_admin ("Failed to delete Zoho guest address", $response);
 					return $response;
 				}
 			}
@@ -471,100 +492,131 @@ class bbz_order {
 		// if shipped, change woo order status to completed
 		if (empty($this->order) ) {
 			$response = new WP_Error ('bbz-ord-200', 'Invalid order object for update_order_status');
-			$this->notify_admin ("Failed to update status for order", $response);
+			//$this->notify_admin ("Failed to update status for order", $response);
 			return $response;
 		}
-		$zoho_order_id = $this->order->get_meta ('zoho_order_id', true);
+		$zoho_order_id = $this->get_zoho_order_id();
 		
 		// check that order already been sent
 		if (empty($zoho_order_id)) {
 			$response = new WP_Error ('bbz-ord-201', 'update_order_status Order not yet submitted to Zoho', array ('order'=>$this->order));
-			$this->notify_admin ("Failed to update status for order", $response);
+			//$this->notify_admin ("Failed to update status for order", $response);
 			return $response;
 		}
-			
+		
+		// get salesorder record from zoho		
 		$zoho = new zoho_connector;
-		$response = $zoho->get_salesorder ($zoho_order_id);
-		if (is_wp_error ($response) ) {
-			$response->add ('bbz-ord-202', 'update_order_status get_salesorder failed', array ('order'=>$this->order));
-			$this->notify_admin ("Failed to update status for order", $response);
-			return $response;
+		$salesorder = $zoho->get_salesorder ($zoho_order_id);
+		if (is_wp_error ($salesorder) ) {
+			$salesorder->add ('bbz-ord-202', 'update_order_status get_salesorder failed', array ('order'=>$this->order));
+			//$this->notify_admin ("Failed to update status for order", $salesorder);
+			return $salesorder;
 		}
-		$shipments = array();
-		$shipment_status = $response ['shipped_status'];
-		$carrier_map = array (
-			'Royal Mail' =>  array ('RM', 'Royal mail'),
-			'DX Delivery' => array ('DX', 'dx', 'Dx'),
-			);
-		// If AST PRO plugin is Installed
-		if ( class_exists( 'WC_Advanced_Shipment_Tracking_Actions' ) ) {
-			$ast_supported_providers = array();
-			$ast = WC_Advanced_Shipment_Tracking_Actions::get_instance();
-			if (method_exists ($ast, 'get_providers')) {
-				foreach ($ast->get_providers () as $slug=>$provider) {
-					$ast_supported_providers[] = $provider['provider_name'];
+		
+		
+		// if zoho has marked the order as delivered, update the status here and do nothing else
+		// this deals with old orders, orders delivered manually and orders that haven't been tracked
+		bbz_debug ($this->order_id, 'Status ' . $salesorder ['shipped_status']);
+		if ('fulfilled' == $salesorder ['shipped_status']) {
+			$this->order->update_status ('delivered', 'Update from Zoho:');
+			
+		} elseif (in_array($salesorder ['shipped_status'], array('shipped', 'partially_shipped'))) {  // order shipped
+		
+			$carrier_map = array (  // Carrier name used by tracking => array of partial names that may be used in zoho
+				'Royal Mail' =>  array ('RM', 'Royal mail'),
+				'DX Delivery' => array ('DX', 'dx', 'Dx'),
+				);
+			// If AST PRO plugin is Installed, build array of supported carriers
+			if ( class_exists( 'WC_Advanced_Shipment_Tracking_Actions' ) ) {
+				$ast_supported_providers = array();
+				$ast = WC_Advanced_Shipment_Tracking_Actions::get_instance();
+				if (method_exists ($ast, 'get_providers')) {
+					foreach ($ast->get_providers() as $slug=>$provider) {
+						$ast_supported_providers [$provider['provider_name']] = $slug;
+					}
+				}
+				$ast_tracking_items = array();
+				if (method_exists ($ast, 'get_tracking_items')) {
+					$ast_tracking_items = $ast->get_tracking_items ($this->order_id);
 				}
 			}
-		}
-		//bbz_debug ($ast_supported_providers);
+			//bbz_debug ($ast_supported_providers);
 	
-		if (in_array($shipment_status, array('shipped', 'partially_shipped', 'fulfilled'))) {  // order shipped
-			$shipments = $this->order->get_meta ('zoho_shipments');
-			if (empty($shipments)) $shipments = array();
-			// collect shipment data and save to order - could be used in email to customer
-			foreach ($response ['packages'] as $package) {
-				if (!isset($shipments[$package['shipment_number']])) {
-					// this is a new shipment record
-					$carrier = $package ['carrier'];
-					// clean up carrier field
-					foreach ($carrier_map as $clean_carrier=>$alias_list) {
-						foreach ($alias_list as $alias) {
-							if (str_contains ($carrier, $alias)) {
-								$carrier = $clean_carrier;
-								break 2;
+			//load shipments array with any shipments already recorded for this order
+//			$shipments = $this->order->get_meta ('zoho_shipments');
+//			if (empty($shipments)) $shipments = array();  //make sure it's an array, not a string
+
+			$shipments = array();
+			// collect shipment data from salesorder and add any new ones
+			foreach ($salesorder ['packages'] as $package) {
+				// this is a new shipment record
+				$carrier = $package ['carrier'];
+				// clean up carrier field
+				foreach ($carrier_map as $clean_carrier=>$alias_list) {
+					foreach ($alias_list as $alias) {
+						if (str_contains ($carrier, $alias)) {
+							$carrier = $clean_carrier;
+							break 2;
+						}
+					}
+				}
+				// clean up tracking number field
+				$tracking_number = str_replace (array (' ', '-'), '', $package ['tracking_number']);
+				//  add shipment to array for local storage
+				$shipments [$package['shipment_number']] = array (
+					'package_id' => $package ['package_id'],
+					'package_number' => $package ['package_number'],
+					'shipment_id' => $package['shipment_id'],
+					'shipment_date' => $package ['shipment_date'],
+					'carrier' => $carrier,
+					'service' => $package ['service'],
+					'tracking_number' => $tracking_number,
+					'shipment_date' => $package ['shipment_date'],
+					);
+			}
+			
+			if (!empty ($shipments)) {
+				// If AST PRO plugin is Installed
+				if ( class_exists( 'WC_Advanced_Shipment_Tracking_Actions' )) {
+					foreach ($shipments as $key => $shipment){
+						// match on carrier and tracking number
+						$tracking_exists = false;
+						if (empty ($shipment ['carrier_slug'])) {
+							$shipment['carrier_slug'] = $ast_supported_providers[$shipment['carrier']];
+							$shipments [$key] = $shipment; // update source array
+						}
+						foreach ($ast_tracking_items as $tracking) {
+							if ($tracking['tracking_provider'] == $shipment ['carrier_slug']
+								&& $tracking['tracking_number'] == $shipment ['tracking_number']) {
+								$tracking_exists = true;
+								break;
 							}
 						}
-					}
-					//  add shipment to array for local storage
-					$shipments [$package['shipment_number']] = array (
-						'package_id' => $package ['package_id'],
-						'package_number' => $package ['package_number'],
-						'shipment_id' => $package['shipment_id'],
-						'shipment_date' => $package ['shipment_date'],
-						'carrier' => $carrier,
-						'service' => $package ['service'],
-						'tracking_number' => $package ['tracking_number'],
-						'shipment_date' => $package ['shipment_date'],
-						);
-					// If AST PRO plugin is Installed
-					if ( class_exists( 'WC_Advanced_Shipment_Tracking_Actions' )) {
-						if (function_exists( 'ast_insert_tracking_number' ) && in_array ($carrier, $ast_supported_providers)) {
+
+						if (false === $tracking_exists 
+							&& function_exists( 'ast_insert_tracking_number')  
+							&& !empty($shipment['carrier_slug']) ) {
+							//bbz_debug('Calling insert tracking');
 							ast_insert_tracking_number( 
-								$this->order->get_id(), 
-								$package ['tracking_number'],
-								$carrier, 
-								$package ['shipment_date'],
-								in_array($shipment_status, array('shipped', 'fulfilled')) ? 1 : 2); //status 1 = shipped, 2 = partial
+								$this->order_id, 
+								$shipment ['tracking_number'],
+								$shipment ['carrier'], 
+								$shipment ['shipment_date'],
+								in_array($salesorder ['shipped_status'], array('shipped', 'fulfilled')) ? 1 : 2); //status 1 = shipped, 2 = partial
 						}
 					}
-				}
+				}	
+				// save zoho shipment details to order meta
+				$this->order->update_meta_data ('zoho_shipments', $shipments);
 			}
-			
-			// save zoho shipment details to order meta
-			if (!empty ($shipments)) $this->order->update_meta_data ('zoho_shipments', $shipments);
 
-			//update order status - should trigger email to customer
-			/*if ( !class_exists( 'WC_Advanced_Shipment_Tracking_Actions' ) ) {
-				$this->order->set_status ('shipped');
-			} elseif ($shipment_status == 'delivered') $this->order->set_status ('delivered');
-			*/
 			$this->order->save();
 		}
 	
-		return $response;
+		return true;
 	}
 	
-	private function notify_admin ($message, $error) {
+	/*private function notify_admin ($message, $error) {
 		$subject = $message ." #".$this->order->get_order_number();
 		$message .= " Error details follow:\n";
 		if (is_wp_error ($error) ) {
@@ -577,7 +629,7 @@ class bbz_order {
 		$message .= "\nOrder Data\n<pre>".print_r ($this->order->get_data(), true).'</pre>';
 		bbz_email_admin ($subject, $message);
 	}
-		
+	*/	
 		
 
 }

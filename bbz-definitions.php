@@ -30,18 +30,24 @@ define ('BBZ_PAYMENT_METHOD_ACCOUNT', 'account');
 if (stristr(site_url(), 'bitternbooks.co.uk') !== false) { // if running on live site
 	define ('ZOHO_SALESORDER_PREFIX', 'WO-');
 	define ('BBZ_DEBUG', false);
-} else {
+	define ('BBZ_RUNCRONS', false);
+} else { //assume this is a test instance
 	define ('ZOHO_SALESORDER_PREFIX', 'TEST-');
 	define ('BBZ_DEBUG', true);
+	define ('BBZ_RUNCRONS', false);
 }
 
-// Post Meta tags
+// Post Meta tags (for products)
 define ('BBZ_PM_ZOHO_ID', 'zoho_item_id');
 define ('BBZ_PM_WHOLESALE_PRICE', 'wholesale_customer_wholesale_price');
 define ('BBZ_PM_HAVE_WHOLESALE_PRICE', 'wholesale_customer_have_wholesale_price');
 define ('BBZ_PM_INACTIVE_REASON', 'bbz_inactive_reason');
 define ('BBZ_PM_WHOLESALE_DISCOUNT', 'bbz_wholesale_discount');
 define ('BBZ_PM_DIMENSION_STRING', 'bbz_dimension_string');
+
+// Post Meta tags for orders
+define ('BBZ_PM_ZOHO_ORDER_ID', 'zoho_order_id');
+define ('BBZ_PM_SHIPMENTS', 'zoho_shipments');
 
 // User meta tags
 define ('BBZ_UM_ZOHO_ID', 'zoho_contact_id');

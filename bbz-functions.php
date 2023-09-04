@@ -288,10 +288,10 @@ function bbz_before_checkout() {
 if ( BBZ_DEBUG ) {
 	add_action( 'woocommerce_thankyou', 'bbz_process_single_order');
 } else {
-	add_action( 'woocommerce_thankyou', 'bbz_order_processing');
+	add_action( 'woocommerce_thankyou', 'bbz_schedule_order_processing');
 }
 
-function bbz_order_processing( $order_id ){	
+function bbz_schedule_order_processing( $order_id ){	
 	// spawn cron job to process the order asap (short delay to allow current page to complete)
 	wp_schedule_single_event (time() + 30, 'bbz_process_order_hook', array ('order_id'=>$order_id));
 }
@@ -304,8 +304,7 @@ function bbz_process_single_order ( $order_id ) {
 	if (is_wp_error($response) ) {
 		$response->add ('bbz-func-006', 'Processing single order', array(
 			"Order ID"=>order_id));
-		$this->notify_admin ("Failed to create Zoho order", $response);
-		return $response;
+		bbz_email_admin ("Failed to create Zoho order", $response);
 	}
 }
 

@@ -125,29 +125,39 @@ function bbz_update_payment_terms ($user_id='') {
 
 }
 
-function bbz_debug ($data, $title='', $exit=true) {
+function bbz_debug ($data, $title='', $exit=false) {
 	if ( BBZ_DEBUG ) {
-		echo '<br>', $title, '<pre>';
-		if (is_wp_error ($data) ) {
-			$codes = $data->get_error_codes();
-			foreach ($codes as $error_code) {
-				echo 'Error: '.$error_code.' -> '.$data->get_error_message ($error_code)."\n";
-				echo 'Error data: <pre>'.print_r ($data->get_error_data ($error_code), true)."</pre>\n";
-			}
-		} else {
-			if (is_null ($data)) {
-				$data = 'NULL';
-			} elseif ($data===false) {
-				$data = 'FALSE';
-			} elseif (empty($data)){
-				$data = 'NO DATA';
-			}
-			print_r ($data);
+		$log_file = "./bbz_debug.log";
+		if (is_null ($data)) {
+			$data = 'NULL';
+		} elseif ($data===false) {
+			$data = 'FALSE';
+		} elseif (empty($data)){
+			$data = 'NO DATA';
 		}
-		echo '</pre>';
+		if (is_scalar ($data) || is_string($data)) {
+			bbz_debug_line ($title.' '. $data, $log_file);
+		} else {
+			bbz_debug_line ($title, $log_file);
+			if (is_wp_error ($data) ) {
+				$codes = $data->get_error_codes();
+				foreach ($codes as $error_code) {
+					bbz_debug_line ('Error: '.$error_code.' -> '.$data->get_error_message ($error_code), $log_file);
+					bbz_debug_line ('Error data: <pre>'.print_r ($data->get_error_data ($error_code), true)."</pre>", $log_file);
+				}
+			} else {
+				
+				bbz_debug_line ('Data: <pre>'.print_r ($data, true).'<\pre>', $log_file);
+			}
+		}
 		if ($exit) exit;
 	}
 }
+function bbz_debug_line ($line, $log) {
+	error_log (date('[Y-m-d H:i:s]').$line."\n", 3, $log);
+	echo $line.'<br>';
+}
+
 function bbz_build_user_list ($arg) {
 	$user_list = array();
 	// if user not specified get list of all users
