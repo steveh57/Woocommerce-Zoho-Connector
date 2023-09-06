@@ -44,6 +44,7 @@ define ('BBZ_PM_HAVE_WHOLESALE_PRICE', 'wholesale_customer_have_wholesale_price'
 define ('BBZ_PM_INACTIVE_REASON', 'bbz_inactive_reason');
 define ('BBZ_PM_WHOLESALE_DISCOUNT', 'bbz_wholesale_discount');
 define ('BBZ_PM_DIMENSION_STRING', 'bbz_dimension_string');
+define ('BBZ_PM_AVAILABILITY', 'bbz_availability');
 
 // Post Meta tags for orders
 define ('BBZ_PM_ZOHO_ORDER_ID', 'zoho_order_id');

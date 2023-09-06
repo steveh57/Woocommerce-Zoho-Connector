@@ -52,7 +52,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 			'height'	=> 'height',
 			'weight'	=> 'weight',
 			'weight_unit' => 'weight_unit',	// might be g or kg
-			'dimension_unit' => 'dimension_unit' //usually cm
+			'dimension_unit' => 'dimension_unit', //usually cm
+			'product_type'	=> 'product_type',	//goods or services
+			'item_type'	=> 'cf_item_type_unformatted',
+			'author'	=> 'cf_author_unformatted',
+			
 		);
 		if (! $this->isconnected() ) return false;
 		

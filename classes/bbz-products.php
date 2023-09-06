@@ -14,7 +14,8 @@ class bbz_products {
 	private $tax_class_map = array (
 		'Standard Rate'	=> '',
 		'Reduced Rate'	=> 'reduced-rate',
-		'Zero Rate'		=> 'zero-rate'
+		'Zero Rate'		=> 'zero-rate',
+		'Outside Scope'	=> 'outside-scope',
 	);
 	
 	private $shipping_map = array();
@@ -122,37 +123,47 @@ class bbz_products {
 					$product->set_tax_status ('taxable');
 				} else $warnings [] = 'missing-tax-class';
 				
-				if (!empty ($item['shipping_class']) && isset ($this->shipping_map[$item['shipping_class']]) ) {
-					$product->set_shipping_class_id ($this->shipping_map[$item['shipping_class']]);
-				} else $warnings [] = 'missing-shipping-class';
-				
-				$product->set_manage_stock (true) ;  // Ensure stock management enabled
-				if ($product->get_low_stock_amount() == 0) {
-					$product->set_low_stock_amount(3);  //set warning level to 3 if not set
-				}
-				// load dimension and weight data
-				if (!empty ($item['dimension_unit']) && $item['dimension_unit'] == 'cm' &&
-					!empty($item['length']) && !empty($item['width'])) {
-					$product->set_length($item['length']);
-					$product->set_width($item['width']);
-					if (!empty($item['height'])) $product->set_height($item['height']);
-					//create dimension string for display in product data
-					update_post_meta ($post_id, BBZ_PM_DIMENSION_STRING, $item['length'].'cm x '.$item['width'].'cm');
-				} else $warnings[] = 'missing-dimensions';
-				
-				if (!empty ($item['weight_unit']) &&  !empty($item['weight'])) { //could be g or kg
-					if ($item['weight_unit'] == 'g') $product->set_weight ($item['weight']/1000);
-					elseif ($item['weight_unit'] == 'kg') $product->set_weight ($item['weight']);
-				} else $warnings [] = 'missing-weight';
+				if ($item['product_type'] !== 'goods' ) {
+					// services always in stock
+					$product->set_manage_stock (false) ;  // disable stock management
+					$product->set_stock_status ('instock');
 					
-				// Set woo stock levels
-				// TODO: Enhance this by:
-				// Get Backorder SQL from Zoho Analytices to find stock requirements for open sales orders
-				// Subtract from 'available' stock figure to get true stock availability.
-			
-				$product->set_stock_quantity ($item['stock']);
+				} else {					
+					if (!empty ($item['shipping_class']) && isset ($this->shipping_map[$item['shipping_class']]) ) {
+						$product->set_shipping_class_id ($this->shipping_map[$item['shipping_class']]);
+					} else $warnings [] = 'missing-shipping-class';
+					
+					if (!empty ($item ['availability'] ) && 'Pre-order' == $item ['availability']
+						&& 0 == $item['stock']) {
+						// set pre-order items to be in stock
+						$product->set_manage_stock (false) ;  // disable stock management
+						$product->set_stock_status ('instock');
+					} else {
+						$product->set_manage_stock (true) ;  // Ensure stock management enabled
+						if ($product->get_low_stock_amount() == 0) {
+							$product->set_low_stock_amount(3);  //set warning level to 3 if not set
+						}
+						$product->set_stock_quantity ($item['stock']);
+					}
+					
+					// load dimension and weight data
 				
-				// Restrict out of stock items to wholesale, unless available to pre-order
+					if ( !empty ($item['dimension_unit']) && $item['dimension_unit'] == 'cm'
+						&& !empty($item['length']) && !empty($item['width'])) {
+						$product->set_length($item['length']);
+						$product->set_width($item['width']);
+						if (!empty($item['height'])) $product->set_height($item['height']);
+						//create dimension string for display in product data
+						update_post_meta ($post_id, BBZ_PM_DIMENSION_STRING, $item['length'].'cm x '.$item['width'].'cm');
+					} else $warnings[] = 'missing-dimensions';
+
+					if (!empty ($item['weight_unit']) &&  !empty($item['weight'])) { //could be g or kg
+						if ($item['weight_unit'] == 'g') $product->set_weight ($item['weight']/1000);
+						elseif ($item['weight_unit'] == 'kg') $product->set_weight ($item['weight']);
+					} else $warnings [] = 'missing-weight';
+				}
+
+				// Restrict out of stock items to wholesale
 				if ($item['wholesale_only'] === 'Yes' || ($item['stock'] <= 0 && !in_array ($item ['availability'], BBZ_AVAIL_PRE ) )) {
 					update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
 				} else {
@@ -176,7 +187,11 @@ class bbz_products {
 				update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
 
 			} 
-			if (!empty ($item ['availability'] )) update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
+			if (!empty ($item ['availability'] )) {
+				update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
+				$slug = str_replace(' ', '-', strtolower ($item['availability']));
+				update_post_meta ($post_id, BBZ_PM_AVAILABILITY, $slug);
+			}
 
 		} else {  //product is not listed on zoho (not available)
 				$product->set_stock_quantity (0);

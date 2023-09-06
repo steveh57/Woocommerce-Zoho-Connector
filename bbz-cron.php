@@ -37,6 +37,7 @@ if (BBZ_RUNCRONS) {  // Cron jobs only run on live site (see bbz-definitions)
 
 add_action ('bbz_hourly_cron', 'bbz_process_orders');
 add_action ('bbz_process_next_page', 'bbz_process_orders', 10, 2);
+
 define ('SEVEN_DAYS', 7*24*3600);
 define ('NINETY_DAYS', 90*24*3600);
 define ('ONE_YEAR', 365*24*3600);
