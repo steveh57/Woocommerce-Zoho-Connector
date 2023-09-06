@@ -170,6 +170,7 @@ function bbz_availability_filter( $availability ) {
 	// 'class' => 'out-of-stock', 'available-on-backorder', 'in-stock';
 	$text = $availability['availability'];
 	global $post;
+	$zoho_code = get_post_meta ($post->ID, BBZ_PM_AVAILABILITY, true);
 	$zoho_text = get_post_meta ($post->ID, BBZ_PM_INACTIVE_REASON, true);
 	switch ($availability['class']) {
 		case 'out-of-stock':
@@ -177,7 +178,7 @@ function bbz_availability_filter( $availability ) {
 			break;
 	
 		case 'available-on-backorder':
-			if (in_array ($zoho_text, BBZ_AVAIL_PRE)) {
+			if (in_array ($zoho_code, BBZ_AVAIL_PRE)) {
 				$text = 'Available to pre-order';
 			} else {
 				$text = !empty ($zoho_text) ? $zoho_text." - available to backorder" : 'Available to backorder';
@@ -191,6 +192,23 @@ function bbz_availability_filter( $availability ) {
 	return $availability;
 }
 
+// Change add to cart text for pre-orders and backorders
+
+add_filter( 'woocommerce_product_single_add_to_cart_text', 'bbz_add_to_cart_button_text', 10, 2 ); 
+add_filter( 'woocommerce_product_add_to_cart_text', 'bbz_add_to_cart_button_text', 10, 2 );
+function bbz_add_to_cart_button_text ( $add_to_cart_text, $product ) {
+	if ($product->is_on_backorder() ) {
+		$zoho_code = $product->get_meta (BBZ_PM_AVAILABILITY, true);
+		if (in_array ($zoho_code, BBZ_AVAIL_PRE)) {
+			$add_to_cart_text = 'Pre-order';
+		} else {
+			$add_to_cart_text = 'Backorder';
+		}
+	}
+    return $add_to_cart_text; 
+}
+
+
 /*********
  * Availability text filter for trade order form
  *
@@ -200,16 +218,18 @@ add_filter( 'wwof_filter_product_item_action_controls', 'bbz_wwof_availability_f
 
 function bbz_wwof_availability_filter( $action_field, $product, $alternate ) {
 	// action field is html text for display in trade order form
-	$availability = get_post_meta ($product->get_id(), BBZ_PM_INACTIVE_REASON, true);
+//	$availability = get_post_meta ($product->get_id(), BBZ_PM_INACTIVE_REASON, true);
+	$zoho_code = get_post_meta ($post->ID, BBZ_PM_AVAILABILITY, true);
+	$zoho_text = get_post_meta ($post->ID, BBZ_PM_INACTIVE_REASON, true);
 	
 	// if item out of stock, replace string with availability field from zoho if set
-	if (strpos ($action_field, 'Out of Stock')!==false && is_string($availability)) {
-		$action_field = str_replace ("Out of Stock", $availability, $action_field);
+	if (strpos ($action_field, 'Out of Stock')!==false && is_string($zoho_text)) {
+		$action_field = str_replace ("Out of Stock", $zoho_text, $action_field);
 	
 	// if item on backorder, then replace action with pre-order or backorder as appropriate
 	} elseif ( strpos ($action_field, 'Add To Cart')!==false && $product->get_stock_status() == 'onbackorder') {
-		if (in_array ($availability, BBZ_AVAIL_PRE)) {
-			$action_field = str_replace ('Add To Cart', $availability, $action_field);
+		if (in_array ($zoho_code, BBZ_AVAIL_PRE)) {
+			$action_field = str_replace ('Add To Cart', $zoho_text, $action_field);
 		} else {
 			$action_field = str_replace ('Add To Cart', 'Backorder', $action_field);
 		}
@@ -226,9 +246,9 @@ add_filter( 'woocommerce_is_purchasable', 'bbz_is_purchasable_filter', 20, 2);
 
 function bbz_is_purchasable_filter( $purchasable, $product ) {
 	if ($purchasable && in_array ($product->get_stock_status(), array ('onbackorder', 'outofstock'))) {
-		$availability = get_post_meta ($product->get_id(), BBZ_PM_INACTIVE_REASON, true);
+		$availability = $product->get_meta (BBZ_PM_AVAILABILITY, true);
 		if (bbz_is_wholesale_customer()) {
-			if (in_array ($availability, BBZ_AVAIL_OFF) ) return false;
+			if (!in_array ($availability, BBZ_AVAIL_SOON) ) return false;
 		} else {  // retail customer - allow pre orders
 			if (!in_array ($availability, BBZ_AVAIL_PRE)) return false;
 		}

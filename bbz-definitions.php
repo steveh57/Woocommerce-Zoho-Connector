@@ -64,9 +64,9 @@ define ('ZOHO_PAYPAL_ACCOUNT_ID', '1504573000005379057');
 define ('ZOHO_STRIPE_ACCOUNT_ID', '1504573000000149167');
 
 // Stock availability constants - must match values used in Zoho items Availability (fka Inactivity Reason) field
-define ('BBZ_AVAIL_OFF', array ('Out of print', 'Delisted', 'No longer available', 'Replaced by new edition'));
-define ('BBZ_AVAIL_TEMP', array ('Reprinting', 'Temporarily unavailable', 'Pre-order'));  //Allows backorders on these items
-define ('BBZ_AVAIL_PRE', array ('Pre-order'));
+define ('BBZ_AVAIL_OFF', array ('out-of-print', 'delisted', 'no-longer-available', 'replaced-by-new-edition'));
+define ('BBZ_AVAIL_SOON', array ('available', 'coming-soon', 'pre-order'));  //Allows backorders on these items
+define ('BBZ_AVAIL_PRE', array ('pre-order'));
 
 // Constants for Trackingmore connection
 define ('BBZ_TM_URL', 'https://api.trackingmore.com/v4/');
