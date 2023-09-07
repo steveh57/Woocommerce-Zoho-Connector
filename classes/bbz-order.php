@@ -92,7 +92,7 @@ class bbz_order {
 	private $options;
 	private $guest=false;
 	private $zoho_cust_id;
-	private $on_zoho;
+	private $on_zoho=false;
 	
 	function __construct ($order) {
 		$this->order = wc_get_order( $order );
@@ -159,7 +159,7 @@ class bbz_order {
 		}
 		
 		// check that order hasn't already been sent - can be called twice if user refreshes page
-		if (!$resubmit && false == $this->on_zoho) {
+		if ($this->on_zoho  && !$resubmit) {
 			return new WP_Error ('bbz-ord-002', 'Order has already been submitted to Zoho', array ('order'=>$this->order));
 		}
 		

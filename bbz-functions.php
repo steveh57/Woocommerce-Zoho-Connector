@@ -191,8 +191,12 @@ function bbz_availability_filter( $availability ) {
 	$availability['availability'] = $text;
 	return $availability;
 }
+/**********
+* ADD TO CART TEXT
+*
+* Change add to cart text for pre-orders and backorders
+*******/
 
-// Change add to cart text for pre-orders and backorders
 
 add_filter( 'woocommerce_product_single_add_to_cart_text', 'bbz_add_to_cart_button_text', 10, 2 ); 
 add_filter( 'woocommerce_product_add_to_cart_text', 'bbz_add_to_cart_button_text', 10, 2 );
@@ -306,9 +310,9 @@ function bbz_before_checkout() {
  * On the live site call bbz_order_processing to process in background and reduce waiting time
  */
 if ( BBZ_DEBUG ) {
-	add_action( 'woocommerce_thankyou', 'bbz_process_single_order');
+	add_action( 'woocommerce_thankyou', 'bbz_process_single_order', 10, 1);
 } else {
-	add_action( 'woocommerce_thankyou', 'bbz_schedule_order_processing');
+	add_action( 'woocommerce_thankyou', 'bbz_schedule_order_processing', 10, 1);
 }
 
 function bbz_schedule_order_processing( $order_id ){	

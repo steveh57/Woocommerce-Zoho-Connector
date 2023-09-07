@@ -48,7 +48,7 @@ function bbz_process_orders ($resubmit=false, $page=1) {
 	$results = wc_get_orders (array (
 		'status'=>array('processing', 'completed', 'partial-shipped'),	// completed used for status shipped
 		'type'=>'shop_order',
-		'date_created'=> '>'.(time()-ONE_YEAR), // ignore anything older than 90 days (90x24x3600)
+		'date_created'=> '>'.(time()-NINETY_DAYS), // ignore anything older than 90 days (90x24x3600)
 		//'paginate' => true,
 		'limit' => $limit,
 		'paged' => $page));
@@ -66,10 +66,10 @@ function bbz_process_orders ($resubmit=false, $page=1) {
 			$response = $bbz_order->update_order_status();
 		} else {
 			//order not yet submitted to zoho
-			if ($bbz_order->get_date_created() > time() - SEVEN_DAYS) {
+//			if ($bbz_order->get_date_created()->getTimestamp() > time() - SEVEN_DAYS) {
 				// don't process any old orders, avoid weird results!
 				$response = $bbz_order->process_new_order($resubmit);
-			}
+//			}
 		}
 		if (is_wp_error ($response) ) {
 			$response->add ('bbz-cron-001', 'bbz_process_orders failed for order', $order_id);
@@ -82,6 +82,14 @@ function bbz_process_orders ($resubmit=false, $page=1) {
 		wp_schedule_single_event (time() + 60, 'bbz_process_next_page', array (false, $page+1));
 	}
 }
+
+add_action ('bbz_hourly_cron', 'bbz_hourly_product_update');
+function bbz_hourly_product_update () {
+	$products = new bbz_products;
+	$result = $products->update_all();
+	// Don't bother to report errors on hourly update, too many emails
+}
+
 
 /*****
 *  Daily database updates
@@ -99,13 +107,14 @@ function bbz_daily_user_update () {
 		bbz_email_admin ('Daily User Update failed', $result);
 		return;
 	}
-/*	$result = bbz_update_payment_terms ('all');
+/*	This resulted in too many calls to zoho.  Now done immediately before checkout page
+	$result = bbz_update_payment_terms ('all');
 	if (is_wp_error($result)) {
 		bbz_email_admin ('Daily User Update failed', $result);
 		return;
 	}
 	*/
-	bbz_email_admin ('Daily user updates completed');
+	//bbz_email_admin ('Daily user updates completed');
 }
 
 function bbz_daily_product_update () {

@@ -34,7 +34,7 @@ if (stristr(site_url(), 'bitternbooks.co.uk') !== false) { // if running on live
 } else { //assume this is a test instance
 	define ('ZOHO_SALESORDER_PREFIX', 'TEST-');
 	define ('BBZ_DEBUG', true);
-	define ('BBZ_RUNCRONS', false);
+	define ('BBZ_RUNCRONS', true);
 }
 
 // Post Meta tags (for products)
@@ -65,7 +65,7 @@ define ('ZOHO_STRIPE_ACCOUNT_ID', '1504573000000149167');
 
 // Stock availability constants - must match values used in Zoho items Availability (fka Inactivity Reason) field
 define ('BBZ_AVAIL_OFF', array ('out-of-print', 'delisted', 'no-longer-available', 'replaced-by-new-edition'));
-define ('BBZ_AVAIL_SOON', array ('available', 'coming-soon', 'pre-order'));  //Allows backorders on these items
+define ('BBZ_AVAIL_SOON', array ('available', 'pre-order'));  //Allows backorders on these items
 define ('BBZ_AVAIL_PRE', array ('pre-order'));
 
 // Constants for Trackingmore connection

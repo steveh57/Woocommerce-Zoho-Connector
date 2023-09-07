@@ -171,23 +171,19 @@ class bbz_products {
 					}
 					
 					// Deal with stock and availability
-					if ( $item['stock'] > 0) {		// Do we have physical stock?
+					$product->set_manage_stock (true) ;  // Ensure stock management enabled
+					$product->set_stock_quantity ($item['stock']);
+					if ($product->get_low_stock_amount() == 0) {
+						$product->set_low_stock_amount(3);  //set warning level to 3 if not set
+					}
 
-						// Yes, item in stock
-						$product->set_manage_stock (true) ;  // Ensure stock management enabled
-						if ($product->get_low_stock_amount() == 0) {
-							$product->set_low_stock_amount(3);  //set warning level to 3 if not set
-						}
-						$product->set_stock_quantity ($item['stock']);
-
-					}else{
+					if ( $item['stock'] <= 0) {		// Do we have physical stock?
 						// No stock available
-						$product->set_stock_quantity (0);
 					
-						if ('pre-order' === $availability ) {
+						if ('pre-order' == $availability ) {
 							// set pre-order items to be in stock
-							$product->set_manage_stock (false) ;  // disable stock management
-							$product->set_stock_status ('onbackorder');
+							//$product->set_manage_stock (false) ;  // disable stock management
+							//$product->set_stock_status ('outofstock');
 							$product->set_backorders ('yes');
 						} else {
 							// Restrict out of stock items to wholesale
@@ -206,11 +202,6 @@ class bbz_products {
 				update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
 
 			} 
-			if (!empty ($item ['availability'] )) {
-				update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
-				$slug = str_replace(' ', '-', strtolower ($item['availability']));
-				update_post_meta ($post_id, BBZ_PM_AVAILABILITY, $slug);
-			}
 
 		} else {  //product is not listed on zoho (not available)
 				$product->set_stock_quantity (0);
