@@ -99,6 +99,8 @@ class bbz_products {
 		if ( !empty($sku) && isset ($this->items[$sku]) ) {	// have we got zoho data for this sku?
 			$item = $this->items[$sku];
 			$availability = empty ($item['availability']) ? 'available' : str_replace(' ', '-', strtolower ($item['availability']));
+			// if expected soon, and now in stock, set availability as available
+			$availability = in_array ($availability, BBZ_AVAIL_SOON) && $item['stock'] > 0  ? 'available' : $availability;
 			update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
 			update_post_meta ($post_id, BBZ_PM_AVAILABILITY, $availability); //cleaned up version - lowercase with hyphens
 

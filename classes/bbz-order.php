@@ -96,8 +96,10 @@ class bbz_order {
 	
 	function __construct ($order) {
 		$this->order = wc_get_order( $order );
-		//if ('WC_Order' !== get_class ($this->order)) $this->order = null;
-		if (empty($this->order) ) {
+		
+		// Check this is a shop order and not a refund
+		if (!method_exists ($this->order, 'get_type') || $this->order->get_type() !== 'shop_order') {
+			$this->order = NULL;
 			return false;
 		}
 		$this->order_id = $this->order->get_id();
