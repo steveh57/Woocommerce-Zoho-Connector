@@ -5,8 +5,8 @@
     Description:    Elements to link Bittern Books website to Zoho
     Author:         Steve Haines
     Author URI:     http://www.unilake.co.uk/
-    Version:        2.4.4
-	Release Date:	4/10/23
+    Version:        2.5.0
+	Release Date:	6/10/23
     Requirements:   PHP 5.2.4 or above, WordPress 3.4 or above.
 */
 
@@ -31,11 +31,12 @@ include_once ( BBZ_CLASSPATH . '/bbz-linkuser-form.php');
 include_once ( BBZ_CLASSPATH . '/bbz-action-form.php');
 include_once ( BBZ_CLASSPATH . '/bbz-admin-page.php');
 include_once ( BBZ_CLASSPATH . '/bbz-products.php');
+include_once ( BBZ_CLASSPATH . '/bbz-shipments.php');
 include_once ( BBZ_PATH . '/bbz-wwlc-filters.php');
 include_once ( BBZ_PATH . '/bbz-wwof-filters.php');
 include_once ( BBZ_PATH . '/bbz-functions.php');  // miscellaneous actions and filter functions
 include_once ( BBZ_PATH . '/bbz-cron.php');		// daily and hourly cron functions
-
+	
 
 
 // Submenu class

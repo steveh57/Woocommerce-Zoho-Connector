@@ -238,40 +238,25 @@ class bbz_addresses {
 		}
 	}	
 
-	/*****
-	* 	zoho to woo
-	*
-	*	uses fields from zoho contact record (as returned from zoho api)
-	*	to create a woo format address array.
-	*	$type is shipping, billing or addresses
-	* 	$index is only applicable for type=addresses
-	*****/
 	private $zoho_address_names = array (
 		'billing'		=> 'billing_address',
 		'shipping'		=> 'shipping_address',
 	);
-
-	private function zoho_to_woo ($zoho_contact, $type, $index='') {
-		//$this->_display ($zoho_contact);
-		$woo_address = array();
-		if ($type == 'billing' || $type == 'shipping') {
-			$zoho_address = $zoho_contact [$this->zoho_address_names[$type]];
-		} elseif (!empty ($index) && isset($zoho_contact['addresses'][$index])) {
-			$zoho_address = $zoho_contact ['addresses'][$index];
-			$type = 'shipping';  // use shipping prefix for additional addresses
-		} else return false;
-		$zoho_address['company'] = $zoho_contact ['company_name'];
-		$userdata = get_userdata ( $this->user_id );
-		
-		// special handling for first and last name for billing and shipping
+	/*****
+	* zoho_address_to_woo
+	*
+	* $zoho_address	address array from zoho contact or salesorder
+	* Returns woo format address array
+	*
+	******/
+	
+	public static function zoho_address_to_woo ($zoho_address) {
+			// special handling for first and last name for billing and shipping
 		// zoho just has one field 'attention' so,
 		// if set and two words, we map these onto first and last names
 		// otherwise we enter first 'Attention:, last zoho attention field
 		// if empty we use the user's first and last name - see below
-		if (empty ($zoho_address ['attention'])) {
-			$zoho_address ['firstname'] = $userdata->first_name;
-			$zoho_address ['lastname'] = $userdata->last_name;
-		} else {
+		if (!empty ($zoho_address ['attention'])) {
 			$att_split = explode (' ', $zoho_address ['attention']);
 			if ( count($att_split) == 2) {
 				$zoho_address ['firstname'] = $att_split[0];
@@ -284,13 +269,10 @@ class bbz_addresses {
 		//$this->_display ($zoho_address);
 		//bbz_debug(array($zoho_address, $zoho_contact));
 		
-		foreach ($this::$zoho_field_map as $zoho_field => $woo_field) {
+		foreach (bbz_addresses::$zoho_field_map as $zoho_field => $woo_field) {
 			if ( empty ( $zoho_address[$zoho_field])) {
 				// no data for this field from zoho
 				switch ($zoho_field) {
-					case 'phone':  // if shipping or billing phone blank, use main contact phone number
-						$woo_address [$woo_field] = $zoho_contact['phone'];
-						break;
 					case 'country':
 						$woo_address [$woo_field] = 'GB';  // default country to GB if blank
 						break;
@@ -306,6 +288,35 @@ class bbz_addresses {
 			}
 		}
 		return $woo_address;
+	}
+	
+	/*****
+	* 	zoho to woo
+	*
+	*	uses fields from zoho contact record (as returned from zoho api)
+	*	to create a woo format address array.
+	*	$type is shipping, billing or addresses
+	* 	$index is only applicable for type=addresses
+	*****/
+	
+	private function zoho_to_woo ($zoho_contact, $type, $index='') {
+		//$this->_display ($zoho_contact);
+		$woo_address = array();
+		if ($type == 'billing' || $type == 'shipping') {
+			$zoho_address = $zoho_contact [$this->zoho_address_names[$type]];
+		} elseif (!empty ($index) && isset($zoho_contact['addresses'][$index])) {
+			$zoho_address = $zoho_contact ['addresses'][$index];
+			$type = 'shipping';  // use shipping prefix for additional addresses
+		} else return false;
+		$zoho_address['company'] = $zoho_contact ['company_name'];
+		$userdata = get_userdata ( $this->user_id );
+		if (empty ($zoho_address ['attention'])) {
+			$zoho_address ['attention'] = $userdata->first_name.' '.$userdata->last_name;
+		}
+		if (empty ($zoho_address ['phone'])) {
+			$zoho_address ['phone'] = $zoho_contact['phone'];
+		}
+		return $this->zoho_address_to_woo ($zoho_address);
 	}
 	/*****
 	* is_same - compare two woo format addresses with field name prefixes $type

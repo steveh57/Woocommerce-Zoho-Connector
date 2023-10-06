@@ -50,10 +50,10 @@ class bbz_test_form extends bbz_admin_form {
 						'delete-address'	=> 'Delete Zoho address (key=customer_id, value=address_id)',
 						'add-shipping-addresses' => 'Add a new shipping address (key=ALL or val=user id',
 						'get_cross_sells'	=> 'Get all product cross sells',
-						'get_shipmentorders' => 'Get shipment orders (key=id (optional),value=status)',
-						'get_packages' 		=> 'Get packages (key=id (optional),value=status)',
-						'update_shipment_status' => 'Update Zoho shipment status (key=id, val=status)',
-						'update_shipment_test' => 'Test update_shipmentorder function',
+					//	'get_shipmentorders' => 'Get shipment orders (key=id (optional),value=status)',
+					//	'get_packages' 		=> 'Get packages (key=id (optional),value=status)',
+					//	'update_shipment_status' => 'Update Zoho shipment status (key=id, val=status)',
+					//	'update_shipment_test' => 'Test update_shipmentorder function',
 					)
 				),
 
@@ -95,6 +95,7 @@ class bbz_test_form extends bbz_admin_form {
 		$function = $this->options->get('function');
 		$filterkey = $this->options->get ('filterkey');
 		$filtervalue = $this->options->get ('filtervalue');
+		$filtervalue = strstr ($filtervalue, ',') ? str_getcsv ($filtervalue) : $filtervalue;
 		$filter = array($filterkey=>$filtervalue);
 		$dataset = $this->options->get('dataset');
 		
@@ -266,7 +267,7 @@ class bbz_test_form extends bbz_admin_form {
 					}
 				}
 				break;
-				
+/*				
 			case 'get_shipmentorders':
 				$zoho_so = new zoho_shipmentorders;
 				if (!empty($filterkey)) {
@@ -310,7 +311,7 @@ class bbz_test_form extends bbz_admin_form {
 					$data = $zoho_so->update_status ($filterkey, 'shipped', $filtervalue);
 				}
 				break;
-				
+*/				
 			}
 		
 		

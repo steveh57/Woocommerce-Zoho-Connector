@@ -655,19 +655,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 	}
 	
 	/*****
-	* get_salesorder
+	* get_salesorder/get_salesorders
 	*
 	* @param $zoho_orderid 	Zoho order id to fetch.
 	* @param $filter		Key=>value pairs passed to zoho request.
+	*
+	* If $zoho_orderid is not specified, the call will return an array of sales orders
+	* selected according to the filter parameters.
+	*
+	* If a specific order id is given the call will return a comprehensive array for the sales
+	* order including all line items, shipment packages and other related details.
 	* 
 	* Returns an array of shipment order summary:
 	
 	*
 	*****/
-	public function get_salesorder ( $zoho_orderid, $filter=array()) {
-		if (empty ($zoho_orderid)) return false;
+	public function get_salesorder ( $zoho_orderid='', $filter=array()) {
 		
-		$request = 'salesorders'. '/'. $zoho_orderid;
+		$request = 'salesorders'. (empty ($zoho_orderid) ? '' : '/'. $zoho_orderid);
 		
 		$response = $this->get_books ($request, $filter);
 		if (is_wp_error ($response)) {
@@ -678,12 +683,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 		}
 		if (isset ($response['salesorder'])) {
 			return $response ['salesorder'];
+		} elseif (isset ($response['salesorders'])) {
+			return $response ['salesorders'];
 		} else {
 			return new WP_Error ('bbz-zcon-036', 'Zoho get_salesorder failed', array(
 				'zoho order id'=>$zoho_orderid,
 				'filter' => $filter,
 				'response'=>$response));
 		}
+	}
+	
+	public function get_salesorders ($filter) {
+		return $this->get_salesorder ('', $filter);
 	}
 	
 } //class
