@@ -23,6 +23,7 @@ class bbz_test_form extends bbz_admin_form {
 					'title'		=> 'Test',
 					'options'	=> array (
 						'get-dataset'	=>	'Get specified Books dataset',
+						'post-dataset'	=>	'Post (key:value) to specified Books dataset',
 						'get-analytics'	=>	'Get specified Analytics dataset',
 						'get-itemdata'		=>	'Get Zoho items',
 						'get-shipping-classes' => 'Get wc shippng classes',
@@ -50,10 +51,11 @@ class bbz_test_form extends bbz_admin_form {
 						'delete-address'	=> 'Delete Zoho address (key=customer_id, value=address_id)',
 						'add-shipping-addresses' => 'Add a new shipping address (key=ALL or val=user id',
 						'get_cross_sells'	=> 'Get all product cross sells',
-					//	'get_shipmentorders' => 'Get shipment orders (key=id (optional),value=status)',
-					//	'get_packages' 		=> 'Get packages (key=id (optional),value=status)',
+						'get_shipmentorders' => 'Get shipment orders (key=id (optional),value=status)',
+						'get_packages' 		=> 'Get packages (key=id (optional),value=status)',
 					//	'update_shipment_status' => 'Update Zoho shipment status (key=id, val=status)',
 					//	'update_shipment_test' => 'Test update_shipmentorder function',
+						'get_trackship_row'	=> 'Get Trackship row (key=order id)',
 					)
 				),
 
@@ -115,6 +117,15 @@ class bbz_test_form extends bbz_admin_form {
 		}
 			switch ($function) {
 
+			case 'get-dataset':
+				$data = $zoho->get_books ($dataset, $filter);
+				break;
+				
+			case 'post-dataset':
+				$data = $zoho->post_books ($dataset, $filter);
+				break;
+
+				
 			case 'get-itemdata':
 				$data = $zoho->get_items();
 				break;
@@ -206,10 +217,7 @@ class bbz_test_form extends bbz_admin_form {
 				$data = $this->options->getall();
 				break;
 				
-			case 'get-dataset':
-				$data = $zoho->get_books ($dataset, $filter);
-				break;
-				
+
 			case 'get-analytics':
 				$data = $zoho->get_analytics ($dataset, $filter);
 				break;
@@ -267,7 +275,7 @@ class bbz_test_form extends bbz_admin_form {
 					}
 				}
 				break;
-/*				
+				
 			case 'get_shipmentorders':
 				$zoho_so = new zoho_shipmentorders;
 				if (!empty($filterkey)) {
@@ -285,7 +293,12 @@ class bbz_test_form extends bbz_admin_form {
 					$data = $zoho_so->get_packages_by_status ($filtervalue);
 				}
 				break;
-				
+			
+			case 'get_trackship_row':
+				$ts = WC_Trackship_Actions::get_instance();
+				$data = $ts->get_shipment_rows($filterkey);
+				break;
+/*				
 			case 'update_shipment_test':
 				$zoho_so = new zoho_shipmentorders;
 				if (!empty($filterkey)) {

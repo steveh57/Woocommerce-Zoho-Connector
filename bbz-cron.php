@@ -20,7 +20,7 @@ if (BBZ_RUNCRONS) {  // Cron jobs only run on live site (see bbz-definitions)
 		wp_schedule_event( time(), 'hourly', 'bbz_hourly_cron' );
 	}
 	if ( ! wp_next_scheduled( 'bbz_daily_cron' ) ) {
-		wp_schedule_event( strtotime ('01:00 tomorrow'), 'daily', 'bbz_daily_cron' );
+		wp_schedule_event( strtotime ('02:05 tomorrow'), 'daily', 'bbz_daily_cron' );
 	}
 }
 
@@ -157,7 +157,7 @@ function bbz_daily_product_update () {
 add_action ('bbz_hourly_cron', 'bbz_get_zoho_orders');
 add_action ('bbz_process_next_zoho_orders', 'bbz_get_zoho_orders', 10, 2);
 
-
+// $start parameter for testing only
 function bbz_get_zoho_orders ($zoho_order_list = array()) {
 
 	$zoho = new zoho_connector();
@@ -182,45 +182,62 @@ function bbz_get_zoho_orders ($zoho_order_list = array()) {
 		//get list of zoho orders already linked from woo
 		global $wpdb;
 		$wpdb->flush();  // make sure we run the query afresh as we might have added more order_ids
-		$existing_zoho_orders =  $wpdb->get_col ("SELECT `meta_value` FROM `{$wpdb->prefix}postmeta` WHERE `meta_key` = 'zoho_order_id';");
-
+		$sql = "SELECT meta_value, post_id FROM {$wpdb->prefix}postmeta WHERE meta_key = 'zoho_order_id';";
+		$zoho_order_index =  $wpdb->get_results ($sql, OBJECT_K);
+		//bbz_debug ( $zoho_order_index, 'zoho_order_index', true);
+		
+		// now build a list of the zoho orders and link to the woo order id if it exists
 		foreach ($salesorders as $zoho_order) {
 			$zoho_id = strval($zoho_order['salesorder_id']);
 			// add to the list if zoho order is NOT in woo
-			if (!in_array($zoho_id, $existing_zoho_orders)) $zoho_order_list[] = $zoho_id;
+			$woo_order_id = isset ($zoho_order_index[$zoho_id]) ? $zoho_order_index[$zoho_id]->post_id : NULL ;
+			
+			$zoho_order_list[] = array(
+				'zoho'=>$zoho_id,
+				'woo'=>$woo_order_id,
+				'qty'=>$zoho_order['quantity_shipped']); 
 		}
 	}
+	//bbz_debug ($zoho_order_list, 'zoho_order_list', false, true);
+	
 	// we should now have a complete list of the orders we have to process 
-	
+	$start=0;
 	$limit = min( ZOHO_CALLSPERPAGE, count ($zoho_order_list));
-	for ($i = 0; $i < $limit; $i++) {
-	
+	//$limit = min( $start + 1, count ($zoho_order_list));  //testing 1 at a time
+	for ($i = $start; $i < $limit; $i++) {
 	// loop through zoho sales orders (paged to limit number of zoho calls per batch)
-	//for ($i = ($page-1)*(int)$limit; $i < $page*(int)$limit; $i++) {
+
 		if (isset ($zoho_order_list[$i])) {
-			$zoho_order_id = $zoho_order_list[$i];
-			
-			
-			// zoho order doesn't exist in woo - create dummy order to track shipment.
-			// get full salesorder details from zoho
-			$response = $zoho->get_salesorder($zoho_order_id);
-			if (is_wp_error ($response)) {
-				$response->add('bbz-zsp-002', 'Zoho get_salesorder failed in update_shipments', array(
-					'zoho_order_id' => $zoho_order_id,
-					));
-				return $response;
+			$zoho_order_id = $zoho_order_list[$i]['zoho'];
+			$woo_order_id = $zoho_order_list[$i]['woo'];
+			if (empty($woo_order_id)) {
+				// zoho order doesn't exist in woo - create dummy order to track shipment.
+				// get full salesorder details from zoho
+				$response = $zoho->get_salesorder($zoho_order_id);
+				if (is_wp_error ($response)) {
+					$response->add('bbz-cron-003', 'Zoho get_salesorder failed in update_shipments', array(
+						'zoho_order_id' => $zoho_order_id,
+						));
+					return $response;
+				}
+				$zoho_order = $response;  // this is the full order with package details
+				
+				// now create woo order
+				$bbz_order = new bbz_order_from_zoho ($zoho_order);
+				
+				// and load shipping details
+				$response = true;
+				$response = $bbz_order->update_order_status();
+
+				//bbz_debug ( array ('zoho_order'=>$zoho_order['salesorder_number'], 'woo_order'=>$bbz_order->get_woo_order_id()), 
+				//	'Woo order created',false,true);
+			} else {
+				// zoho order already in woo.  See if it needs an update from woo.
+				//bbz_debug ($zoho_order_list[$i], 'Order to process',false,true);
+				$bbz_shipment = new bbz_shipments ($woo_order_id);
+				$response = $bbz_shipment->update_zoho_tracking ($zoho_order_list[$i]['qty']);
+				//bbz_debug ($response, 'update_zoho_tracking response',false,true);
 			}
-			$zoho_order = $response;  // this is the full order with package details
-			
-			// now create woo order
-			$bbz_order = new bbz_order_from_zoho ($zoho_order);
-			
-			// get order shipping details
-			$response = true;
-			$response = $bbz_order->update_order_status();
-
-			bbz_debug ( array ('zoho_order'=>$zoho_order['salesorder_number'], 'woo_order'=>$bbz_order->get_woo_order_id()), 'Order created');
-
 		}
 	}
 	// remove the orders we've processed

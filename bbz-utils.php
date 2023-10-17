@@ -125,8 +125,8 @@ function bbz_update_payment_terms ($user_id='') {
 
 }
 
-function bbz_debug ($data, $title='', $exit=false) {
-	if ( BBZ_DEBUG ) {
+function bbz_debug ($data, $title='', $exit=false, $always=false) {
+	if ( BBZ_DEBUG || $always == true) {
 		$log_file = "./bbz_debug.log";
 		if (is_null ($data)) {
 			$data = 'NULL';
