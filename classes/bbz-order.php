@@ -500,7 +500,7 @@ class bbz_order {
 	
 	public function update_order_status () {
 		// get zoho status for order
-		// if shipped, change woo order status to completed
+
 		if (empty($this->order) ) {
 			$response = new WP_Error ('bbz-ord-200', 'Invalid order object for update_order_status');
 			//$this->notify_admin ("Failed to update status for order", $response);
@@ -537,10 +537,6 @@ class bbz_order {
 			$bbz_shipments = new bbz_shipments ($this->order_id);
 			$bbz_shipments->load_packages($this->zoho_order);
 		
-			// save zoho shipment details to order meta
-			// THIS ISN'T REALLY NECESSARY - NOT USED ANYWHERE
-			// $this->order->update_meta_data ('zoho_shipments', $shipments);
-
 			$this->order->save();
 		}
 	
@@ -603,4 +599,3 @@ class bbz_order_from_zoho extends bbz_order {
 	}
 
 }
-?>

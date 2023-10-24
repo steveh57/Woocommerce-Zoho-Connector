@@ -443,6 +443,3 @@ function bbz_cart_weight () {
 
 add_action ('woocommerce_cart_totals_after_order_total', 'bbz_cart_weight');
 add_action ('woocommerce_review_order_after_order_total', 'bbz_cart_weight');
-
- 
-?>

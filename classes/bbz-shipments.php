@@ -11,18 +11,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 
 class bbz_shipments {
-	private $supported_providers = array();
+//	private $supported_providers = array();
 	private $order_id;
-	private $carrier_map = array (  // Carrier name used by tracking => array of partial names that may be used in zoho
+/*	private $carrier_map = array (  // Carrier name used by tracking => array of partial names that may be used in zoho
 				'Royal Mail' =>  array ('RM', 'Royal mail'),
 				'DX Delivery' => array ('DX', 'dx', 'Dx'),
-				);
-	private $tracked_items = array();
+				);*/
+//	private $tracked_items = array();
 
 	function __construct ($order_id) {
 		$this->order_id = $order_id;
 		// If AST PRO plugin is Installed, build array of supported carriers
-		if ( class_exists( 'WC_Advanced_Shipment_Tracking_Actions' ) ) {
+		/*if ( class_exists( 'WC_Advanced_Shipment_Tracking_Actions' ) ) {
 			$ast = WC_Advanced_Shipment_Tracking_Actions::get_instance();
 			if (method_exists ($ast, 'get_providers')) {
 				foreach ($ast->get_providers() as $slug=>$provider) {
@@ -33,7 +33,33 @@ class bbz_shipments {
 			if (method_exists ($ast, 'get_tracking_items')) {
 				$this->tracked_items = $ast->get_tracking_items ($this->order_id);
 			}
+		}*/
+	}
+	private $slug_map = array (  // Carrier name used by tracking => array of partial names that may be used in zoho
+		'rm' => 'royal-mail',
+		'royal mail' => 'royal-mail',
+		'dx' => 'dx-delivery'
+	);
+	private function get_slug ($carrier) {
+		foreach ($this->slug_map as $key=>$slug) {
+			if (str_contains (strtolower ($carrier), $key)) {
+				return $slug;
+			}
 		}
+		return false; //not found
+	}
+	private function get_tracking_carrier ($slug){
+		// If AST PRO plugin is Installed, build array of supported carriers
+		if ( class_exists( 'WC_Advanced_Shipment_Tracking_Actions' ) ) {
+			$ast = WC_Advanced_Shipment_Tracking_Actions::get_instance();
+			if (method_exists ($ast, 'get_providers')) {
+				$providers = $ast->get_providers();
+				if (!empty($providers[$slug]['provider_name'])) {
+					return $providers[$slug]['provider_name'];
+				}
+			}
+		}
+		return false;
 	}
 	/****
 	* load_packages
@@ -52,7 +78,7 @@ class bbz_shipments {
 		// collect shipment data from salesorder
 		foreach ($zoho_order ['packages'] as $package) {
 			// this is a new shipment record
-			$carrier = $package ['carrier'];
+/*			$carrier = $package ['carrier'];
 			// clean up carrier field
 			foreach ($this->carrier_map as $clean_carrier=>$alias_list) {
 				foreach ($alias_list as $alias) {
@@ -61,7 +87,12 @@ class bbz_shipments {
 						break 2;
 					}
 				}
-			}
+			}*/
+			$slug = $this->get_slug ($package ['carrier']);
+			if (!empty ($slug)) $carrier = $this->get_tracking_carrier ($slug);
+			if (empty ($carrier)) $carrier = $package ['carrier'];
+			
+			
 			// clean up tracking number field
 			$tracking_number = str_replace (array (' ', '-'), '', $package ['tracking_number']);
 			
@@ -73,6 +104,7 @@ class bbz_shipments {
 				'shipment_id' => $package['shipment_id'],		// internal zoho shipment id
 				'shipment_date' => $package ['shipment_date'],
 				'carrier' => $carrier,
+				'carrier_slug' => $slug,
 				'service' => $package ['service'],
 				'tracking_number' => $tracking_number,
 				'zoho_status' => $package['shipment_status']
@@ -81,19 +113,26 @@ class bbz_shipments {
 		
 		// If AST PRO plugin is Installed
 		if ( !empty ($shipments ['packages']) && class_exists( 'WC_Advanced_Shipment_Tracking_Actions' )) {
+			$ast = WC_Advanced_Shipment_Tracking_Actions::get_instance();
+			if (method_exists ($ast, 'get_tracking_items')) {
+				$tracked_items = $ast->get_tracking_items ($this->order_id);
+			}
+
 			foreach ($shipments ['packages'] as $key => $shipment){
 				// Check if this shipment has already been loaded: match on carrier and tracking number
 				$tracking_exists = false;
 				//bbz_debug (array($shipment, $this->supported_providers));
-				if (empty ($shipment ['carrier_slug'])  && !empty($this->supported_providers[$shipment['carrier']])) {
-					$shipment['carrier_slug'] = $this->supported_providers[$shipment['carrier']];
+				/*if (empty ($shipment ['carrier_slug'])  && !empty($this->supported_providers[$shipment['carrier']])) {
+					//$shipment['carrier_slug'] = $this->supported_providers[$shipment['carrier']];
 					$shipments ['packages'][$key] = $shipment; // update source array
-				}
-				foreach ($this->tracked_items as $tracking) {
-					if ($tracking['tracking_provider'] == $shipment ['carrier_slug']
-						&& $tracking['tracking_number'] == $shipment ['tracking_number']) {
-						$tracking_exists = true;
-						break;
+				}*/
+				if (!empty ($shipment ['carrier_slug'])) {
+					foreach ($tracked_items as $tracking) {
+						if ($tracking['tracking_provider'] == $shipment ['carrier_slug']
+							&& $tracking['tracking_number'] == $shipment ['tracking_number']) {
+							$tracking_exists = true;
+							break;
+						}
 					}
 				}
 				
@@ -173,7 +212,7 @@ class bbz_shipments {
 				$shipments = $this->load_packages ($zoho_order);
 			} 
 			
-			if (!empty ($shipments)) {
+			if (!empty ($shipments) && !empty ($shipments['packages'])) {
 				//bbz_debug (array('Shipments'=>$shipments, 'Trackings'=>$trackings), 'Trackings and Shipments records',false,true);
 				// match tracking records to shipments	
 				foreach ($trackings as $tracking) {
@@ -221,4 +260,3 @@ class bbz_shipments {
 	}
 
 }
-?>	

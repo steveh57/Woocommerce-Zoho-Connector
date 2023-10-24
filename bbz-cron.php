@@ -249,8 +249,3 @@ function bbz_get_zoho_orders ($zoho_order_list = array()) {
 	}
 
 }
-
-
-
-
-?>

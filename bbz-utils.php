@@ -262,4 +262,3 @@ function bbz_update_cross_sells () {
 		}
 		return $cross_sells;
 	}
-?>
