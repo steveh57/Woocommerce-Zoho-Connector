@@ -365,11 +365,18 @@ class bbz_order {
 				'value'				=> 'Website',
 			);
 		$zoho_order ['shipping_charge'] = $this->order->get_shipping_total();
-		$zoho_order ['discount'] = $this->order->get_discount_total();
+		$discount = $this->order->get_discount_total();
+		if ($discount > 0) {
+			$zoho_order ['discount'] = strval($discount);
+			$zoho_order ['discount_type'] = 'entity_level';
+		}
 		$zoho_order ['payment_terms_label'] = $payment_terms ['name'];
 		$zoho_order ['payment_terms'] = $payment_terms ['days'];
-		$zoho_order ['notes'] = $this->order->get_customer_note();
-		if (!empty($zoho_order ['notes'] )) {
+		$notes = $this->order->get_customer_note();
+		if (empty ($notes)) {
+			$zoho_order ['notes_default'] = true;
+		} else {
+			$zoho_order ['notes'] = $notes;
 			// alert order processing to presence of customer notes
 			$zoho_order ['reference_number'] .= ' SEE NOTES';
 		}
@@ -377,11 +384,6 @@ class bbz_order {
 		// Flag priority orders with PRIORITY in the ref field
 		if (false !== stristr($zoho_order ['delivery_method'], 'priority')) {
 			$zoho_order ['reference_number'] = 'PRIORITY '.$zoho_order ['reference_number'];
-		}
-		if ($zoho_order ['discount'] == 0) unset ($zoho_order ['discount']);
-		if (empty ($zoho_order ['notes']) ) {
-			unset ($zoho_order ['notes']);
-			$zoho_order ['notes_default'] = true;
 		}
 		$zoho_order['terms_default'] = true;
 		
@@ -400,7 +402,7 @@ class bbz_order {
 			}
 		}
 
-		//bbz_debug ($zoho_order, 'Order array before sending', false);
+		//bbz_debug ($zoho_order, 'Order array before sending');
 		$zoho = new zoho_connector;
 		return $zoho->create_salesorder ($zoho_order);
 
@@ -459,7 +461,7 @@ class bbz_order {
 		$zoho = new zoho_connector;
 		$zoho_invoice = $zoho->create_invoice ($zoho_invoice, $confirm=true);
 		if (!is_wp_error ($zoho_invoice)) {
-			$this->order->add_meta_data ('zoho_invoice_id', $zoho_order['invoice_id']);
+			$this->order->add_meta_data ('zoho_invoice_id', $zoho_invoice['invoice_id']);
 		}
 		return $zoho_invoice;
 

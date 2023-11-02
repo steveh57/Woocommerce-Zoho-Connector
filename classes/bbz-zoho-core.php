@@ -151,6 +151,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 					'request args'=>$request_args,
 					'response'=> $zoho_data
 				));
+			} elseif (empty($zoho_data)) {
+				return new WP_Error ('bbz-zc-003A', 'No JSON data returned from request to Zoho_books', array(
+					'request url'=>$request_url,
+					'request args'=>$request_args,
+					'response'=> $response
+				));
 			} else {
 				return $zoho_data;
 			}

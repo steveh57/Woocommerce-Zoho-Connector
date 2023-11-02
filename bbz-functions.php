@@ -327,7 +327,7 @@ function bbz_process_single_order ( $order_id ) {
 	$response = $order->process_new_order ();
 	if (is_wp_error($response) ) {
 		$response->add ('bbz-func-006', 'Processing single order', array(
-			"Order ID"=>order_id));
+			"Order ID"=>$order_id));
 		bbz_email_admin ("Failed to create Zoho order", $response);
 	}
 }
