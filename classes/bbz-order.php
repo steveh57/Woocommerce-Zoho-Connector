@@ -572,7 +572,7 @@ class bbz_order {
 
 class bbz_order_from_zoho extends bbz_order {
 
-	function __construct ($zoho_order) {
+	function __construct ($zoho_order, $wp_user_id = null) {
 	
 		$this->zoho_order = $zoho_order;
 		$this->zoho_order_id = $zoho_order['salesorder_id'];
@@ -583,8 +583,21 @@ class bbz_order_from_zoho extends bbz_order {
 		$address = bbz_addresses::zoho_address_to_woo( $zoho_order['shipping_address']);
 		$this->order->set_address( $address, 'shipping' );
 		//$address = bbz_addresses::zoho_address_to_woo( $zoho_order['billing_address']);
-		$address['first_name'] = $zoho_order['salesorder_number'];
-		$address['last_name'] = $zoho_order['customer_name'];
+		if (!empty($wp_user_id)) {
+			$this->order->set_customer_id($wp_user_id);
+			$user = get_userdata($wp_user_id);
+			$customer_name = $user->data->display_name;
+		} else {
+			$customer_name = $zoho_order['customer_name'];
+		}
+			
+		$split_name = str_word_count($customer_name,1); //splits name into words
+		if (!empty($split_name[0])) {
+			$address['first_name'] = $split_name[0];
+			if (!empty($split_name[1])) {
+				$address['last_name'] = $split_name[1];
+			}
+		}
 		$this->order->set_address( $address, 'billing' );
 		$this->order->set_date_created ( $zoho_order ['date']);
 		$this->order->set_total( $zoho_order['total'] );

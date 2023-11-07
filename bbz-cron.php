@@ -186,6 +186,12 @@ function bbz_get_zoho_orders ($zoho_order_list = array()) {
 		$zoho_order_index =  $wpdb->get_results ($sql, OBJECT_K);
 		//bbz_debug ( $zoho_order_index, 'zoho_order_index', true);
 		
+		// now get index of users by zoho customer id
+		//NB if more than one user is linked to a zoho customer, this will pick the first.
+		$sql = "SELECT meta_value, user_id FROM {$wpdb->prefix}usermeta WHERE meta_key = 'zoho_contact_id';";
+		$zoho_contact_index =  $wpdb->get_results ($sql, OBJECT_K);
+		//bbz_debug ( $zoho_contact_index, 'zoho_contact_index', true);
+
 		// now build a list of the zoho orders and link to the woo order id if it exists
 		foreach ($salesorders as $zoho_order) {
 			$zoho_id = strval($zoho_order['salesorder_id']);
@@ -202,7 +208,7 @@ function bbz_get_zoho_orders ($zoho_order_list = array()) {
 	
 	// we should now have a complete list of the orders we have to process 
 	$start=0;
-	$limit = min( ZOHO_CALLSPERPAGE, count ($zoho_order_list));
+	$limit = 20;//min( ZOHO_CALLSPERPAGE, count ($zoho_order_list));
 	//$limit = min( $start + 1, count ($zoho_order_list));  //testing 1 at a time
 	for ($i = $start; $i < $limit; $i++) {
 	// loop through zoho sales orders (paged to limit number of zoho calls per batch)
@@ -221,9 +227,18 @@ function bbz_get_zoho_orders ($zoho_order_list = array()) {
 					return $response;
 				}
 				$zoho_order = $response;  // this is the full order with package details
-				
+				//find matching user if one exists
+				$wp_user_id = null;
+				$zoho_customer_id = strval($zoho_order['customer_id']);
+				if (isset($zoho_contact_index[$zoho_customer_id])) {
+					$wp_user_id = $zoho_contact_index[$zoho_customer_id]->user_id;
+				}
+				/*bbz_debug(array('zoho_order'=>$zoho_order,
+					'wp_user_id'=>$wp_user_id,
+					'zoho_customer_id'=>$zoho_customer_id,
+					'zoho_contact_index'=>$zoho_contact_index));*/
 				// now create woo order
-				$bbz_order = new bbz_order_from_zoho ($zoho_order);
+				$bbz_order = new bbz_order_from_zoho ($zoho_order, $wp_user_id);
 				
 				// and load shipping details
 				$response = true;
@@ -244,7 +259,7 @@ function bbz_get_zoho_orders ($zoho_order_list = array()) {
 	$zoho_order_list = array_slice ($zoho_order_list, $i);
 
 	//if we haven't processed all the orders, resubmit order processing to continue
-	if (!empty($zoho_order_list)) {
+	if (!empty($zoho_order_list)  && !BBZ_DEBUG) {
 		wp_schedule_single_event (time() + 60, 'bbz_process_next_zoho_orders', array ($zoho_order_list));
 	}
 
