@@ -317,7 +317,7 @@ if ( BBZ_DEBUG ) {
 
 function bbz_schedule_order_processing( $order_id ){	
 	// spawn cron job to process the order asap (short delay to allow current page to complete)
-	wp_schedule_single_event (time() + 30, 'bbz_process_order_hook', array ('order_id'=>$order_id));
+	wp_schedule_single_event (time() + 30, 'bbz_process_order_hook', array ($order_id));
 }
 
 add_action ('bbz_process_order_hook', 'bbz_process_single_order', 10, 1);
@@ -443,3 +443,23 @@ function bbz_cart_weight () {
 
 add_action ('woocommerce_cart_totals_after_order_total', 'bbz_cart_weight');
 add_action ('woocommerce_review_order_after_order_total', 'bbz_cart_weight');
+
+/******
+* Block emails for zoho created orders
+*
+*****/
+
+function bbz_filter_woocommerce_email ( $recipient, $order, $email ) { 
+    if ( ! $order || ! is_a( $order, 'WC_Order' ) ) return $recipient;
+    
+    // If transaction_id starts with 'ZOHO' - set in class bbz_orders
+    if ( substr($order->get_transaction_id (), 0, 4) === 'ZOHO') {
+        $recipient = '';
+    }
+    return $recipient;
+}
+add_filter( 'woocommerce_email_recipient_new_order', 'bbz_filter_woocommerce_email', 10, 3 );
+add_filter( 'woocommerce_email_recipient_customer_on_hold_order', 'bbz_filter_woocommerce_email', 10, 3 );
+add_filter( 'woocommerce_email_recipient_customer_processing_order', 'bbz_filter_woocommerce_email', 10, 3 );
+add_filter( 'woocommerce_email_recipient_customer_pending_order', 'bbz_filter_woocommerce_email', 10, 3 );
+

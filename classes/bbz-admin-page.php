@@ -72,7 +72,7 @@ class bbz_admin_page {
 		} else {
 			$active_tab = 'setup';
 		}
-		
+	// HTML for the tabs	
 ?>
 	<div class="wrap">
 		<h1>Zoho Connector for Bittern Books</h1>
@@ -80,7 +80,9 @@ class bbz_admin_page {
 			<a href="?page=bbz-admin-page&tab=setup" class="nav-tab <?php echo $active_tab == 'setup' ? 'nav-tab-active' : ''; ?>">Setup</a>
 			<a href="?page=bbz-admin-page&tab=action" class="nav-tab <?php echo $active_tab == 'action' ? 'nav-tab-active' : ''; ?>">Actions</a>	
 			<a href="?page=bbz-admin-page&tab=link-user" class="nav-tab <?php echo $active_tab == 'link-user' ? 'nav-tab-active' : ''; ?>">Link User</a>
-			<a href="?page=bbz-admin-page&tab=test" class="nav-tab <?php echo $active_tab == 'test' ? 'nav-tab-active' : ''; ?>">Testing</a>
+			<a href="?page=bbz-admin-page&tab=zoho-test" class="nav-tab <?php echo $active_tab == 'zoho-test' ? 'nav-tab-active' : ''; ?>">Zoho Tests</a>
+			<a href="?page=bbz-admin-page&tab=test" class="nav-tab <?php echo $active_tab == 'test' ? 'nav-tab-active' : ''; ?>">Other Tests</a>
+
 		</h2>
 <?php		
 /*
@@ -108,9 +110,13 @@ class bbz_admin_page {
 			case 'link-user':
 				$form = new bbz_linkuser_form ();
 				break;
-
+				
+			case 'zoho-test':
+				// Testing form
+				$form = new bbz_test_zoho_form() ;
+				break;
+				
 			case 'test':
-			
 				// Testing form
 				$form = new bbz_test_form() ;
 				break;

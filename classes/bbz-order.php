@@ -602,6 +602,7 @@ class bbz_order_from_zoho extends bbz_order {
 		$this->order->set_date_created ( $zoho_order ['date']);
 		$this->order->set_total( $zoho_order['total'] );
 		$this->order->set_status( 'wc-processing', 'Order created from Zoho' );  // this will get updated later by order_update
+		$this->order->set_transaction_id ('ZOHO-'.$this->zoho_order_id);  //used to identify this as a zoho created order and block emails
 		$this->order->update_meta_data (BBZ_PM_ZOHO_ORDER_ID, $this->zoho_order_id);
 		$this->order->save ();
 		// set up the local variables to be compatible
