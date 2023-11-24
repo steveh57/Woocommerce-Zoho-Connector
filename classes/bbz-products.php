@@ -178,10 +178,11 @@ class bbz_products {
 					if ($product->get_low_stock_amount() == 0) {
 						$product->set_low_stock_amount(3);  //set warning level to 3 if not set
 					}
+					$product->set_catalog_visibility ('visible'); // ensure it's visible
 
 					if ( $item['stock'] <= 0) {		// Do we have physical stock?
 						// No stock available
-					
+
 						if ('pre-order' == $availability ) {
 							// set pre-order items to be in stock
 							//$product->set_manage_stock (false) ;  // disable stock management
@@ -190,8 +191,6 @@ class bbz_products {
 						} else {
 							// Restrict out of stock items to wholesale
 							update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
-			
-							$product->set_catalog_visibility ('visible'); 
 						}
 					}
 				}

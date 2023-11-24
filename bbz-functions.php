@@ -324,11 +324,13 @@ add_action ('bbz_process_order_hook', 'bbz_process_single_order', 10, 1);
 
 function bbz_process_single_order ( $order_id ) {
 	$order = new bbz_order ($order_id);
-	$response = $order->process_new_order ();
-	if (is_wp_error($response) ) {
-		$response->add ('bbz-func-006', 'Processing single order', array(
-			"Order ID"=>$order_id));
-		bbz_email_admin ("Failed to create Zoho order", $response);
+	if (!$order->is_on_zoho()) {  // skip if it's already been loaded
+		$response = $order->process_new_order ();
+		if (is_wp_error($response) ) {
+			$response->add ('bbz-func-006', 'Processing single order', array(
+				"Order ID"=>$order_id));
+			bbz_email_admin ("Failed to create Zoho order", $response);
+		}
 	}
 }
 

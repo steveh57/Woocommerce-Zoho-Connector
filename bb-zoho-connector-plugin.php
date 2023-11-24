@@ -5,8 +5,8 @@
     Description:    Elements to link Bittern Books website to Zoho
     Author:         Steve Haines
     Author URI:     http://www.unilake.co.uk/
-    Version:        2.5.5
-	Release Date:	20/11/23
+    Version:        2.5.6
+	Release Date:	24/11/23
     Requirements:   PHP 5.4 or above, WordPress 3.4 or above.
 */
 
@@ -115,8 +115,12 @@ function bbz_admin_settings() {
 add_action('plugins_loaded', 'bbz_init_account_payment_gateway');
 function bbz_init_account_payment_gateway()
 {
+	if ( class_exists( 'WC_Payment_Gateway' ) ) {  // just in case it hasn't loaded
 		require_once BBZ_CLASSPATH . '/bbz-wc-gateway-account.php';
 		new bbz_wc_gateway_account;
+	} else {
+		echo 'ERROR: WC_Payment_Gateway not loaded<br>';
+	}
 }
 add_filter('woocommerce_payment_gateways', 'bbz_register_account_payment_gateway');
 
