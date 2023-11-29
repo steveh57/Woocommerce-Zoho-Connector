@@ -211,7 +211,7 @@ class bbz_addresses {
 	*
 	****/
 
-	private function update_zoho_address ($woo_address, $address_id, $type='', $zoho_contact_id) {
+	private function update_zoho_address ($woo_address, $address_id, $type, $zoho_contact_id) {
 		
 		// convert woo address to zoho format
 		$zoho_address = $this->woo_to_zoho ($woo_address);

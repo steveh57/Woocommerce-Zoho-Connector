@@ -411,7 +411,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 * fields must be in correct format for zoho
 ****/	
 
-	public function add_address ($contact_id='', $address) {
+	public function add_address ($contact_id, $address) {
 
 		$response = $this->post_books ('contacts/'.$contact_id.'/address', $address);
 		if (is_wp_error ($response)) {
@@ -439,7 +439,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 * fields must be in correct format for zoho and zoho address id must be specified
 ****/	
 
-	public function update_address ($contact_id='', $address, $address_id) {
+	public function update_address ($contact_id, $address, $address_id) {
 		//bbz_debug (array ($contact_id, $address_id, $address), 'In zoho update_address', false);
 	
 		if ($contact_id == '') return false;
@@ -473,7 +473,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 * fields must be in correct format for zoho
 ****/	
 
-	public function delete_address ($contact_id='', $address_id) {
+	public function delete_address ($contact_id, $address_id) {
 
 		$response = $this->delete_books ('contacts/'.$contact_id.'/address/'.$address_id);
 		if (is_wp_error ($response)) {
