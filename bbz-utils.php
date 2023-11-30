@@ -262,3 +262,19 @@ function bbz_update_cross_sells () {
 		}
 		return $cross_sells;
 	}
+
+/*****
+*	Function bbz_zoho_clean
+*
+*	@parameter $input_string	String to be cleaned
+*	@return		Cleaned string
+*
+*	Zoho will reject submissions containing certain characters, use this list to eliminate them.
+*	Used in addresses and order notes
+*****/
+function bbz_zoho_clean ($input_string) {
+	$bad = array("&", "$", "%", "#", "<", ">", "|", "=");
+	$replace = array (' and ', '', '', '', '', '', ' ', '-');
+	return str_replace($bad, $replace, $input_string);
+}
+	

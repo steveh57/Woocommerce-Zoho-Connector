@@ -376,7 +376,7 @@ class bbz_order {
 		if (empty ($notes)) {
 			$zoho_order ['notes_default'] = true;
 		} else {
-			$zoho_order ['notes'] = $notes;
+			$zoho_order ['notes'] = bbz_zoho_clean ($notes);
 			// alert order processing to presence of customer notes
 			$zoho_order ['reference_number'] .= ' SEE NOTES';
 		}

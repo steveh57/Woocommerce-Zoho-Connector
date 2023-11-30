@@ -88,20 +88,13 @@ class bbz_addresses {
 		return $woo_fields;
 	}
 	
-	// Zoho will reject addresses containing certain characters, use this list to eliminate them.
-	private function zoho_clean ($input_string) {
-		$bad = array("&", "$", "%", "#", "<", ">", "|", "=");
-		$replace = array (' and ', '', '', '', '', '', ' ', '-');
-		return str_replace($bad, $replace, $input_string);
-	}
-	
 	/******
 	*	woo_to_zoho
 	*
 	*	convert a woo format address to zoho format
 	*
 	*  Zoho will reject addresses if they contain certain characters, use
-	*  $this->zoho_clean to eliminate them.
+	*  bbz_zoho_clean to eliminate them.
 	******/
 	
 	public function woo_to_zoho ($woo_address) {
@@ -112,9 +105,9 @@ class bbz_addresses {
 			if (!empty ($woo_address[$woo_field_name]) && !empty ($zoho_field_name)) {
 				// create a clean version of the woo field, and convert country codes
 				if ($woo_field_name == 'country') { //wc has country code - eg GB
-					$clean = $this->zoho_clean (WC()->countries->get_countries()[ $woo_address [$woo_field_name] ]);
+					$clean = bbz_zoho_clean (WC()->countries->get_countries()[ $woo_address [$woo_field_name] ]);
 				} else {
-					$clean = $this->zoho_clean ($woo_address [$woo_field_name]);
+					$clean = bbz_zoho_clean ($woo_address [$woo_field_name]);
 				}
 				// some woo fields have to be combined to fit the zoho address model
 				if (is_array ($zoho_field_name)) {
