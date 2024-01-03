@@ -358,49 +358,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 /*********
 * get_sales_history
 *
-* Returns an array of sales data for each customer
-* Format 
-* array( 
-*		zoho_customer_id => array (
-*			zoho_product_id => array (
-*				'2018'	=> n, //unit sales in 2018
-*				'2019'	=> n, //unit sales in 2019
-*				'2020'	=> n  //unit sales in 2020
-*			),
-*			...
-*		)
-*		...
-*	)
-* Note that the values for customer and product ids are from Zoho and still need to be mapped
-* to Wordpress/Woo post and user ids.
+* Returns the output of the Zoho Analytics query 'BBZ Sales History' as an
+* array of rows, where each row is an associative array of '<column name>'=>value
+*
 ********/
 
-	public function get_sales_history ($years=array()) {
+	public function get_sales_history () {
 	
 		$response = $this->get_analytics ('BBZ Sales History');
 		if (is_wp_error ($response)) {
 			$response->add('bbz-zcon-010', 'Zoho get_sales_history failed');
 			return $response;
+		} elseif ( is_array ($response) && is_array ($response['data'])) {
+			return $response['data'];
 		} else {
-			if ( is_array ($response) && is_array ($response['data'])) {
-				$results = array();
-				foreach ($response['data'] as $row) {
-					if (!empty ($row['Customer ID']) && !empty ($row['Item ID']) && is_numeric ($row['Customer ID'])){
-						$cust_id = $row['Customer ID'];
-						$item_id = $row['Item ID'];
-						$item_years = array();
-						$item_total = 0;
-						foreach ($years as $year) {
-							$item_years[$year] = empty ($row[$year]) ? 0 : 0 + $row[$year];
-							$item_total += $item_years[$year];
-							//$results[$cust_id][$item_id][$year] = 
-							//	empty ($row[$year]) ? 0 : 0 + $row[$year]; // force numeric value
-						}
-						if ($item_total > 0) $results[$cust_id][$item_id] = $item_years;
-					}
-				}
-				return $results;
-			}
+			return new WP_Error ('bbz-zcon-011', 'Zoho get_sales_history failed', array(
+				'response'=>$response));
 		}
 	}
 	

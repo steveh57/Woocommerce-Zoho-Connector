@@ -14,6 +14,15 @@
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
+
+// New code for wwof v2
+// apply_filters( 'wwof_post__in_products_from_category', $products, $query )
+/*add_filter( 'wwof_post__in_products_from_category', 'bbz_wwof_product_filter_v2',10,2);
+function bbz_wwof_product_filter_v2 ($products, $query) {
+	bbz_debug(array('products'=>$products, 'query'=>$query), 'wwof_post__in_products_from_category', false, true);
+	return array();
+}
+*/
 // Force use of legacy filter
 
 add_filter('wwof_use_legacy_order_form_filter', '__return_true', 11);

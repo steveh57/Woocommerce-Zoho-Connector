@@ -141,7 +141,7 @@ class bbz_test_zoho_form extends bbz_admin_form {
 				break;
 
 			case 'get-sales-history':
-				$data = $zoho->get_sales_history(array ('2020','2021','2022', '2023'));
+				$data = $zoho->get_sales_history();
 				break;
 			
 			case 'get_salesorder':

@@ -324,7 +324,7 @@ add_action ('bbz_process_order_hook', 'bbz_process_single_order', 10, 1);
 
 function bbz_process_single_order ( $order_id ) {
 	$order = new bbz_order ($order_id);
-	if (!$order->is_on_zoho()) {  // skip if it's already been loaded
+	if (false == $order->is_on_zoho()) {  // skip if it's already been loaded
 		$response = $order->process_new_order ();
 		if (is_wp_error($response) ) {
 			$response->add ('bbz-func-006', 'Processing single order', array(
@@ -465,3 +465,12 @@ add_filter( 'woocommerce_email_recipient_customer_on_hold_order', 'bbz_filter_wo
 add_filter( 'woocommerce_email_recipient_customer_processing_order', 'bbz_filter_woocommerce_email', 10, 3 );
 add_filter( 'woocommerce_email_recipient_customer_pending_order', 'bbz_filter_woocommerce_email', 10, 3 );
 
+
+
+/******
+*	bbz_sales_history shortcode
+*
+*	Used to output sales history for current user and product
+******/
+
+add_shortcode ('bbz_sales_history', array ('bbz_sales_history','shortcode'));

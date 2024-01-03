@@ -27,13 +27,13 @@ define ('BBZ_PAYMENT_METHOD_PAYPAL', 'ppcp-gateway');
 define ('BBZ_PAYMENT_METHOD_STRIPE', 'stripe');
 define ('BBZ_PAYMENT_METHOD_ACCOUNT', 'account');
 
-if (stristr(site_url(), 'bitternbooks.co.uk') !== false) { // if running on live site
-	define ('ZOHO_SALESORDER_PREFIX', 'WO-');
-	define ('BBZ_DEBUG', false);
-	define ('BBZ_RUNCRONS', false);
-} else { //assume this is a test instance
+if (stristr(site_url(), 'test')) { // if running on test site
 	define ('ZOHO_SALESORDER_PREFIX', 'TEST-');
 	define ('BBZ_DEBUG', true);
+	define ('BBZ_RUNCRONS', false);
+} else { //assume this is the live site
+	define ('ZOHO_SALESORDER_PREFIX', 'WO-');
+	define ('BBZ_DEBUG', false);
 	define ('BBZ_RUNCRONS', true);
 }
 
@@ -54,6 +54,7 @@ define ('BBZ_PM_SHIPMENTS', 'zoho_shipments');
 define ('BBZ_UM_ZOHO_ID', 'zoho_contact_id');
 define ('BBZ_UM_PAYMENT_TERMS', 'bbz_payment_terms');
 define ('BBZ_UM_SALES_HISTORY', 'bbz_sales_history');
+define ('BBZ_UM_PREVIOUS_PRODUCTS', 'bbz_previous_products');
 define ('BBZ_UM_ADDRESSES', 'bbz_addresses');
 
 // BBZ Options Names
@@ -81,9 +82,5 @@ define ('BBZ_TM_TIMEOUT', 30);
 define ('BBZ_AUTO_CREATE_CONTACT', false);  
 
 DEFINE ('BBZ_LOGGED_IN_DAYS', 90); // Set number of days users remain logged in for when they check 'remember me'
-
-// Product index - used to translate zoho product id to wp post id in user meta and sales history
-global $bbz_product_index;  //make global to avoid reloading
-$bbz_product_index = array();
 
 ?>

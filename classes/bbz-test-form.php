@@ -41,6 +41,7 @@ class bbz_test_form extends bbz_admin_form {
 						'add-shipping-addresses' => 'Add a new shipping address (key=ALL or val=user id',
 						'get_cross_sells'	=> 'Get all product cross sells',
 						'get_trackship_row'	=> 'Get Trackship row (key=order id)',
+						'get_sales_history'	=> 'Get Sales History',
 					)
 				),
 
@@ -85,15 +86,15 @@ class bbz_test_form extends bbz_admin_form {
 		echo '<h2>Results for "'.$function.'"</h2>';
 		switch ($function) {
 		
-		case 'get_order':
+		case 'get-order':
 			$data = wc_get_order ( $filterkey);
 			break;
 			
-		case 'get_product':
+		case 'get-product':
 			$data = wc_get_product ( $filterkey);
 			break;
 
-		case 'get_user':
+		case 'get-user':
 			$data = get_userdata ( $filterkey);
 			break;
 			
@@ -221,6 +222,11 @@ class bbz_test_form extends bbz_admin_form {
 		case 'get_trackship_row':
 			$ts = WC_Trackship_Actions::get_instance();
 			$data = $ts->get_shipment_rows($filterkey);
+			break;
+			
+		case 'get_sales_history':
+			$sh = new bbz_sales_history();
+			$data = $sh->load();
 			break;
 /*				
 		case 'update_shipment_test':

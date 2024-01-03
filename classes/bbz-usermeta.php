@@ -83,6 +83,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	public function update_zoho_address_id ($type, $address_id) {
 		return update_user_meta ($this->user_id, $type.'_zoho_id', $address_id);
 	}
+	
+	// get shipping postcode for user
+	public function get_shipping_code () {
+		return get_user_meta ($this->user_id, 'shipping_postcode', true);
+	}
+
+	
 	/*****
 	* Load payment terms
 	*
@@ -124,44 +131,38 @@ if ( ! defined( 'ABSPATH' ) ) {
 	*****/
 
 	private function get_product_index () {
-		// $bbz-product_index is a global defined in bbz_definitions
-		global $bbz_product_index;
-		if (empty ($bbz_product_index)) {  // load index from product meta if necessary
-			// get list of product posts and build index of zoho_id to post_id
-			$args = array (
-				'post_type' => 'product',	// only get product posts
-				'numberposts' => -1,		// get all of them
-			);
-			$product_posts = get_posts ( $args);
-
-			foreach ( $product_posts as $post ) {
-				$zoho_id = get_post_meta ($post->ID, BBZ_PM_ZOHO_ID, $single=true);
-				if (!empty ($zoho_id)) $bbz_product_index [$zoho_id] = $post->ID;
-			}
-		}
-		return $bbz_product_index;
+		// wordpress will cache this so it doesn't keep calling the database
+		global $wpdb;
+		$sql = "SELECT meta_value, post_id FROM {$wpdb->prefix}postmeta WHERE meta_key = '".BBZ_PM_ZOHO_ID."';";
+		$product_index =  $wpdb->get_results ($sql, OBJECT_K);
+		//bbz_debug ( $product_index, 'zoho_product_index', true);
+		
+		return $product_index;
 	}
 
 	public function load_sales_history ($sales_history) {
-		$product_list = array();
-		
-		//load product index if not already set
-		$product_index = $this->get_product_index();
-
-		// now translate zoho product ids to woo ids
-		$product_list = array();
-		foreach ($sales_history as $zoho_pid => $sales_data) {
-			if (isset ($product_index[$zoho_pid])) {
-				$product_list[$product_index[$zoho_pid]] = $sales_data;
-			}
+		if (!empty($sales_history)) {
+			update_user_meta ($this->user_id, BBZ_UM_SALES_HISTORY, $sales_history);
 		}
-		update_user_meta ($this->user_id, BBZ_UM_SALES_HISTORY, $product_list);
-		return $product_list;
 	}
 	
-	public function get_sales_history () {
-		return get_user_meta ($this->user_id, BBZ_UM_SALES_HISTORY, true);
+	public function load_previous_products ($previous_products) {
+		if (!empty($previous_products)) {
+			update_user_meta ($this->user_id, BBZ_UM_PREVIOUS_PRODUCTS, implode (',', $previous_products));
+		}
+	}
+	
+	public function clear_sales_history () {
+		delete_user_meta ($this->user_id, BBZ_UM_SALES_HISTORY);
+		update_user_meta ($this->user_id, BBZ_UM_PREVIOUS_PRODUCTS, '1'); // if left blank, query returns all products
+	}
+
+	
+	public function get_sales_history ($product_id) {
+		$sales_history =  get_user_meta ($this->user_id, BBZ_UM_SALES_HISTORY, true);
+		if (isset($sales_history[$product_id])) {
+			return $sales_history[$product_id];
+		} else return false;
 	}
 	
 }
-?>

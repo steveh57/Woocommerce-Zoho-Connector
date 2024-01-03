@@ -127,7 +127,9 @@ class bbz_products {
 					$product->set_sale_price ('');  //make sure sale price is cleared
 				}
 				// Load discount string in post meta
-				update_post_meta ($post_id, BBZ_PM_WHOLESALE_DISCOUNT, number_format(100*(1-($item['wsp']/$item['rrp'])),1).'%');
+				$discount = 100*(1-($item['wsp']/$item['rrp']));
+				update_post_meta ($post_id, BBZ_PM_WHOLESALE_DISCOUNT, number_format($discount,1).'%');
+				if ($discount > 40.1) $warnings[] = "High discount: $discount%";
 				
 				if (!empty ($item['tax_class']) && isset ($this->tax_class_map[$item['tax_class']]) ) {
 					$product->set_tax_class ($this->tax_class_map[$item['tax_class']]);

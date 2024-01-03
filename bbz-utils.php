@@ -66,6 +66,23 @@ function bbz_link_user ($user_id='', $zoho_id='') {  //$user is wp user object
 * Fetches sales history data from Zoho and loads it in user_meta for each linked user.
 * Run daily from bbz-functions cron
 *
+* Format 
+* array( 
+*		zoho_customer_id => array (
+*			zoho_product_id => array (
+*				'2018'	=> n, //unit sales in 2018
+*				'2019'	=> n, //unit sales in 2019
+*				'2020'	=> n  //unit sales in 2020
+*			),
+*			...
+*		)
+*		...
+*	)
+* Note that the values for customer and product ids are from Zoho and still need to be mapped
+* to Wordpress/Woo post and user ids.
+
+
+
 * Arg can either be:
 * - empty, defaulting to current user
 * - 'all' meaining all users
@@ -73,23 +90,21 @@ function bbz_link_user ($user_id='', $zoho_id='') {  //$user is wp user object
 * 
 *******/
 function bbz_load_sales_history ($arg='') {
-	$zoho = new zoho_connector;
-	$response = $zoho->get_sales_history(array ('2020','2021','2022', '2023'));
+	$sales_history = new bbz_sales_history();
+	
+	$response = $sales_history->load();
 	if (is_wp_error($response)) {
 		$response->add('bbz-ut-003', 'bbz_load_sales_history failed');
 		return $response;
 	} else {
+	
 		$user_list = bbz_build_user_list ($arg);
 		// Now update user meta with sales history where applicable
 		$update_count = 0;
 		
 		foreach ($user_list as $user_id) {
-			$user_meta = new bbz_usermeta ($user_id);
-			$zoho_cust_id = $user_meta->get_zoho_id();
-			if (!empty ($zoho_cust_id) && isset($response[$zoho_cust_id])) {
-				$user_meta->load_sales_history ($response[$zoho_cust_id]);
-				$update_count += 1;
-			}
+			$sales_history->load_meta ($user_id);
+			$update_count += 1;
 		}
 		return $update_count;
 	}
