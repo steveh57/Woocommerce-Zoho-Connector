@@ -15,7 +15,7 @@ class bbz_test_form extends bbz_admin_form {
 	private $testform = array (
 			'name'		=>	'bbzform-test',
 			'class'		=>	'bbz_test_form',
-			'title'		=>	'<h2>Test Connection</h2>',
+			'title'		=>	'<h2>Other Tests</h2>',
 			'text_before'	=> '<p>Select the Zoho request to test</p>',
 			'fields'	=>	array (
 				'function'			=> array (

@@ -125,8 +125,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 			'timeout' => BBZ_ZOHO_TIMEOUT,
 		);
 		
-
-		
 		$options->update ( array(
 			'last_request'=>array ($request_url, $request_args),
 			'last_request_time'=>time(), 
@@ -142,10 +140,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 			// shoulde return an array with ['code'] and ['message'] and ['some data']
 			// analytics only returns a code if it fails
 			// code=0 = success
+			if (isset($request_args['headers']['Authorization'])) {  // cut authtoken for security
+				$request_args['headers']['Authorization'] = substr($request_args['headers']['Authorization'],0,20).' OBSCURED';
+			}
 			if (isset($zoho_data['code']) && $zoho_data['code'] !== 0 ) {
-				if (isset($request_args['headers']['Authorization'])) {  // cut authtoken for security
-					$request_args['headers']['Authorization'] = substr($request_args['headers']['Authorization'],0,20).' OBSCURED';
-				}
 				return new WP_Error ('bbz-zc-003', 'Error returned from request to Zoho_books', array(
 					'request url'=>$request_url,
 					'request args'=>$request_args,

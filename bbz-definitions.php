@@ -15,12 +15,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 define ('SAVE_ACTION', 'bbz-save');
 define ('BBZ_OPTION_NAME', 'bbz-options');
 define ('ZOHO_AUTH_URL', 'https://accounts.zoho.com/oauth/v2/');
-define ('ZOHO_BOOKS_API_URL', 'https://books.zoho.com/api/v3/');
+define ('ZOHO_BOOKS_API_URL', 'https://www.zohoapis.com/books/v3/');
 define ('ZOHO_ANALYTICS_API_URL', 'https://analyticsapi.zoho.com/api/steve@bitternbooks.co.uk/ZohoBooks/');
 define ('ZOHO_AUTH_SCOPE', 'ZohoBooks.fullaccess.all,ZohoReports.data.read');
 
 // Zoho REST call timeout in seconds
-define ('BBZ_ZOHO_TIMEOUT', 40);
+define ('BBZ_ZOHO_TIMEOUT', 60);
 
 // Payment method names used by woocommerce payment gateways
 define ('BBZ_PAYMENT_METHOD_PAYPAL', 'ppcp-gateway');
@@ -80,6 +80,7 @@ define ('BBZ_TM_TIMEOUT', 30);
 // This function has been implemented and tested, but switched off at the moment as would create too many
 // contacts in Zoho
 define ('BBZ_AUTO_CREATE_CONTACT', false);  
+define ('BBZ_DISCOUNT_WARNING', 40.2);  // adds warning to daily reports for products with high discounts
 
 DEFINE ('BBZ_LOGGED_IN_DAYS', 90); // Set number of days users remain logged in for when they check 'remember me'
 

@@ -474,3 +474,18 @@ add_filter( 'woocommerce_email_recipient_customer_pending_order', 'bbz_filter_wo
 ******/
 
 add_shortcode ('bbz_sales_history', array ('bbz_sales_history','shortcode'));
+
+/******
+*	Add shortcode to get author slug.  Used in Query to get 'About the Author' detail for product page.
+*
+******/
+
+add_shortcode ('bbz_author_slugs', 'bbz_get_author_slugs');
+
+function bbz_get_author_slugs () {
+	$post_id = get_queried_object_id();
+	$args = array('fields'=>'slugs');
+	$terms = wp_get_post_terms($post_id, 'pa_author-2', $args);
+	return implode($terms);
+}
+

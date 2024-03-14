@@ -20,7 +20,8 @@ class bbz_products {
 	
 	private $shipping_map = array();
 	
-	private $items, $product_posts;
+	private $items;			// storage for zoho items records, loaded in construct()
+	private $product_posts;	// local store for product posts, loaded in construct()
 
 	
 	
@@ -129,7 +130,7 @@ class bbz_products {
 				// Load discount string in post meta
 				$discount = 100*(1-($item['wsp']/$item['rrp']));
 				update_post_meta ($post_id, BBZ_PM_WHOLESALE_DISCOUNT, number_format($discount,1).'%');
-				if ($discount > 40.1) $warnings[] = "High discount: $discount%";
+				if ($discount > BBZ_DISCOUNT_WARNING) $warnings[] = 'High discount: '.number_format($discount,2).'%';
 				
 				if (!empty ($item['tax_class']) && isset ($this->tax_class_map[$item['tax_class']]) ) {
 					$product->set_tax_class ($this->tax_class_map[$item['tax_class']]);
