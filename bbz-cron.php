@@ -91,7 +91,9 @@ function bbz_process_orders ($resubmit=false, $order_ids=array()) {
 		if (is_wp_error ($response) ) {
 			$response->add ('bbz-cron-001', 'bbz_process_orders failed for order', $order_id);
 			bbz_email_admin ("Failed to process order", $response);
-			//continue processing remaining orders
+			$error_codes = $response->get_error_codes();
+			if ( in_array ('zoho-unavailable', $error_codes) || in_array ('zoho-timeout', $error_codes)) return $response;
+			//else continue processing remaining orders
 		}
 	}
 	$order_ids = array_slice ($order_ids, $i);

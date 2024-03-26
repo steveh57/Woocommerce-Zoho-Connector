@@ -109,6 +109,7 @@ function bbz_structured_data_product_filter ( $markup, $product) {
 			$markup [$entname] = $attribute;
 		}
 	}
+	$markup['shippingLabel'] = $product->get_shipping_class();
 	
     return $markup;
 }

@@ -133,8 +133,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 		$response = wp_remote_request ($request_url, $request_args);
 		
 		if (!is_array($response)) {
-			return new WP_Error ('bbz-zc-002', 'Zoho request failed', array(
-				'response'=>$response));
+			if (is_wp_error ($response)) {
+				$error=$response->get_error_messages('http_request_failed');
+				if (!empty($error) && str_contains($error, 'CURL error 28')) {
+					$response->add ('zoho-timeout', 'Zoho request timed out');
+				} else {
+					$response->add('bbz-zc-002', 'Zoho request failed');
+				}
+				return $response;
+			} else {
+				return new WP_Error ('bbz-zc-002', 'Zoho request failed', array('response'=>$response));
+			}
 		} else {
 			$zoho_data = json_decode($response['body'], true);
 			// shoulde return an array with ['code'] and ['message'] and ['some data']
@@ -149,12 +158,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 					'request args'=>$request_args,
 					'response'=> $zoho_data
 				));
-			} elseif (empty($zoho_data)) {
-				return new WP_Error ('bbz-zc-003A', 'No JSON data returned from request to Zoho_books', array(
-					'request url'=>$request_url,
-					'request args'=>$request_args,
-					'response'=> $response
-				));
+			} elseif (empty($zoho_data)) { // No JSON data. Zoho sometimes returns an HTML page if server is unavailable
+				if (isset($response[body]) && str_contains ($response[body], 'Temporarily Unavailable')) {
+					return new WP_Error ('zoho-unavailable', 'Zoho temporarily unavailable');
+				} else {
+					return new WP_Error ('bbz-zc-003A', 'No JSON data returned from request to Zoho_books', array(
+						'request url'=>$request_url,
+						'request args'=>$request_args,
+						'response'=> $response
+					));
+				}
 			} else {
 				return $zoho_data;
 			}
