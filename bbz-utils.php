@@ -272,8 +272,10 @@ function bbz_update_cross_sells () {
 		// And finally update the product records
 		foreach ($cross_sells as $post_id=>$cross_sell_ids) {
 			$product = wc_get_product ($post_id);
-			$product->set_cross_sell_ids($cross_sell_ids);
-			$product->save();
+			if ($product !== false) {
+				$product->set_cross_sell_ids($cross_sell_ids);
+				$product->save();
+			}
 		}
 		return $cross_sells;
 	}

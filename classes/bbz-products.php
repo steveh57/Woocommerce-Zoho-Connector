@@ -75,11 +75,18 @@ class bbz_products {
 				$children = $product->get_children();
 				foreach ($children as $key => $child_id) 
 				{ 
-					$product = wc_get_product ($child_id);
-					$result = $this->update_single ($product);
+					$child = wc_get_product ($child_id);
+					$result = $this->update_single ($child);
 					if (!empty ($result)) $warnings[$child_id] = $result;
 					$update_count += 1; 
 				}
+				// Ensure there are no irrelevant attributes saved for the parent
+				delete_post_meta ($post_id, BBZ_PM_INACTIVE_REASON);
+				delete_post_meta ($post_id, BBZ_PM_AVAILABILITY); 
+				delete_post_meta ($post_id, BBZ_PM_WHOLESALE_DISCOUNT);
+				$product->set_manage_stock (false) ;  // disable stock management
+				$product->set_stock_status ('instock');
+				$product->set_catalog_visibility ('visible'); // ensure it's visible
 			} else {
 				$result = $this->update_single ($product);
 				if (!empty ($result)) $warnings[$product->get_id()] = $result;

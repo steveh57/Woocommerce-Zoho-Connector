@@ -472,6 +472,8 @@ add_filter( 'woocommerce_email_recipient_customer_pending_order', 'bbz_filter_wo
 *	bbz_sales_history shortcode
 *
 *	Used to output sales history for current user and product
+*	Used on trade ordering page
+*	Code in classes/bbz-sales-history.php
 ******/
 
 add_shortcode ('bbz_sales_history', array ('bbz_sales_history','shortcode'));
