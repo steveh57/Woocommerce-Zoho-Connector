@@ -87,6 +87,7 @@ class bbz_products {
 				$product->set_manage_stock (false) ;  // disable stock management
 				$product->set_stock_status ('instock');
 				$product->set_catalog_visibility ('visible'); // ensure it's visible
+				update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'all');
 			} else {
 				$result = $this->update_single ($product);
 				if (!empty ($result)) $warnings[$product->get_id()] = $result;
@@ -206,6 +207,7 @@ class bbz_products {
 				}
 			
 			} else {  //product is inactive on zoho (not available)
+				$product->set_stock_status ('outofstock');
 				$product->set_stock_quantity (0);
 				$product->set_backorders ('no');
 				$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
@@ -215,6 +217,7 @@ class bbz_products {
 			} 
 
 		} else {  //product is not listed on zoho (not available)
+				$product->set_stock_status ('outofstock');
 				$product->set_stock_quantity (0);
 				$product->set_backorders ('no');
 				$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers

@@ -213,7 +213,10 @@ function bbz_email_admin ($subject, $message='') {
 		$codes = $data->get_error_codes();
 		foreach ($codes as $error_code) {
 			$message .= 'Error: '.$error_code.' -> '.$data->get_error_message ($error_code)."\n";
-			$message .= 'Error data: <pre>'.print_r ($data->get_error_data ($error_code), true)."</pre>\n";
+			$error_data = $data->get_error_data ($error_code);
+			if (!empty($error_data)) {
+				$message .= 'Error data: '.print_r ($error_data, true)."\n";
+			}
 		}
 	} elseif (empty($message)) {
 		$message = $subject;

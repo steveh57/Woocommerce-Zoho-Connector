@@ -492,3 +492,25 @@ function bbz_get_author_slugs () {
 	return implode($terms);
 }
 
+/******
+*	Add content around add to cart button on single product page.
+*****
+//add_filter( 'woocommerce_loop_add_to_cart_link', 'storeapps_before_after_btn', 10, 3 );
+//add_action( 'woocommerce_before_add_to_cart_form', 'bbz_before_add_to_cart_form' );
+function bbz_before_add_to_cart_form(){
+     echo '<p>bbz_before_add_to_cart_form</p>';
+ }
+//add_action( 'woocommerce_before_add_to_cart_button', 'bbz_before_add_to_cart_button' );
+function bbz_before_add_to_cart_button(){
+     echo '<p>bbz_before_add_to_cart_button</p>';
+ }
+
+ //add_action( 'woocommerce_after_variations_table', 'bbz_after_variations_table' );
+function bbz_after_variations_table(){
+     echo '<p>bbz_after_variations_table</p>';
+ }
+// add_action( 'woocommerce_after_variations_form', 'bbz_after_variations_form' );
+function bbz_after_variations_form(){
+     echo '<p>bbz_after_variations_form</p>';
+ }
+ */
