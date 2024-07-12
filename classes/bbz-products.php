@@ -239,14 +239,20 @@ class bbz_products {
 	* returns array isbn => name
 	*****/
 	public function get_missing_items() {
-	
 		if (is_array($this->items)) {
 			$index = array();
 			//build index of sku => product_id
 			foreach ( $this->product_posts as $post ) {
-				$sku = get_post_meta ($post->ID, '_sku', $single=true);	// sku is in meta data
-				if ( !('' == $sku) ) {
-					$index [$sku] = $post->ID;
+				$product = wc_get_product ($post);
+				if ($product->is_type( 'variable' )) {
+					$children = $product->get_children();
+					foreach ($children as $key => $child_id) {
+						$sku = get_post_meta ($child_id, '_sku', $single=true);	// sku is in meta data
+						if ( !('' == $sku) ) $index [$sku] = $child_id;
+					}
+				} else {	
+					$sku = get_post_meta ($post->ID, '_sku', $single=true);	// sku is in meta data
+					if ( !('' == $sku) ) $index [$sku] = $post->ID;
 				}
 			}
 			// if item sku from zoho is not in product list

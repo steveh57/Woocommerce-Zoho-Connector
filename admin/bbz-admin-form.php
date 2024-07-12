@@ -88,64 +88,6 @@ class bbz_admin_form {
 				'title'			=> 'Reset Credentials',
 			)
 		),
-/*		'bbzform-short-desc'	=> array (
-			'name'		=> 'bbzform-short-desc',
-			'action'	=>	'short_desc_action',
-			'title'		=>	'<h2>Configure short description</h2>',
-			'text_before'	=> '<p>Select attribute fields.</p>',
-			'fields'	=>	array (
-				'sd_enable'		=> array (
-					'type'	=>	'checkbox',
-					'title'	=>	'Enable',
-				),
-				'author'			=> array (
-					'type'			=> 'select',
-					'title'		=> '{AUTHOR}',
-					'optionfunc'	=> 'attribute_list',
-				),
-				'publisher'			=> array (
-					'type'			=> 'select',
-					'title'		=> '{PUBLISHER}',
-					'optionfunc'	=> 'attribute_list',
-				),
-
-				'isbn'			=> array (
-					'type'			=> 'select',
-					'title'		=> '{ISBN}',
-					'optionfunc'	=> 'attribute_list',
-				),
-				'format'			=> array (
-					'type'			=> 'select',
-					'title'		=> '{FORMAT}',
-					'optionfunc'	=> 'attribute_list',
-				),
-				'pages'			=> array (
-					'type'			=> 'select',
-					'title'		=> '{PAGES}',
-					'optionfunc'	=> 'attribute_list',
-				),
-				'year'			=> array (
-					'type'			=> 'select',
-					'title'		=> '{YEAR}',
-					'optionfunc'	=> 'attribute_list',
-				),
-/*				'template'			=> array (
-					'type'		=> 'textarea',
-					'title'		=> 'Template',
-					'attributes' => array (
-						'rows'		=>	10,
-						'cols'		=>	60,
-					)
-				),
-
-			),
-			'button'		=> array (
-				'name'			=> 'submit',
-				'type'			=> 'primary',
-				'title'			=> 'Save'
-			)
-		)
-*/
 	);
 	
 	protected $options;

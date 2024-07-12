@@ -5,8 +5,8 @@
     Description:    Elements to link Bittern Books website to Zoho
     Author:         Steve Haines
     Author URI:     http://www.unilake.co.uk/
-    Version:        2.6.4
-	Release Date:	22/05/2024
+    Version:        2.6.5
+	Release Date:	12/07/2024
     Requirements:   PHP 5.4 or above, WordPress 3.4 or above.
 */
 
@@ -17,6 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 define ('BBZ_PATH', dirname( __FILE__ ));
 define ('BBZ_CLASSPATH', BBZ_PATH . '/classes' );
 define ('BBZ_ASSETSPATH', BBZ_PATH . '/assets' );
+define ('BBZ_ADMINPATH', BBZ_PATH . '/admin' );
 include_once ( BBZ_PATH . '/bbz-definitions.php');
 include_once ( BBZ_PATH . '/bbz-utils.php');		// utility functions
 include_once ( BBZ_CLASSPATH . '/bbz-usermeta.php');
@@ -26,12 +27,12 @@ include_once ( BBZ_CLASSPATH . '/bbz-zoho-core.php');
 include_once ( BBZ_CLASSPATH . '/bbz-zoho-connector.php');
 include_once ( BBZ_CLASSPATH . '/bbz-zoho-shipmentorders.php');
 include_once ( BBZ_CLASSPATH . '/bbz-order.php');
-include_once ( BBZ_CLASSPATH . '/bbz-admin-form.php');
-include_once ( BBZ_CLASSPATH . '/bbz-test-form.php');
-include_once ( BBZ_CLASSPATH . '/bbz-test-zoho-form.php');
-include_once ( BBZ_CLASSPATH . '/bbz-linkuser-form.php');
-include_once ( BBZ_CLASSPATH . '/bbz-action-form.php');
-include_once ( BBZ_CLASSPATH . '/bbz-admin-page.php');
+include_once ( BBZ_ADMINPATH . '/bbz-admin-form.php');
+include_once ( BBZ_ADMINPATH . '/bbz-test-form.php');
+include_once ( BBZ_ADMINPATH . '/bbz-test-zoho-form.php');
+include_once ( BBZ_ADMINPATH . '/bbz-linkuser-form.php');
+include_once ( BBZ_ADMINPATH . '/bbz-action-form.php');
+include_once ( BBZ_ADMINPATH . '/bbz-admin-page.php');
 include_once ( BBZ_CLASSPATH . '/bbz-products.php');
 include_once ( BBZ_CLASSPATH . '/bbz-shipments.php');
 include_once ( BBZ_CLASSPATH . '/bbz-sales-history.php');
