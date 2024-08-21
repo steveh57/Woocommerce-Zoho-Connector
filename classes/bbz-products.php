@@ -108,10 +108,16 @@ class bbz_products {
 		if ( !empty($sku) && isset ($this->items[$sku]) ) {	// have we got zoho data for this sku?
 			$item = $this->items[$sku];
 			$availability = empty ($item['availability']) ? 'available' : str_replace(' ', '-', strtolower ($item['availability']));
-			// if expected soon, and now in stock, set availability as available
-			$availability = in_array ($availability, BBZ_AVAIL_SOON) && $item['stock'] > 0  ? 'available' : $availability;
+			// x if expected soon, and now in stock, set availability as available
 			update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
 			update_post_meta ($post_id, BBZ_PM_AVAILABILITY, $availability); //cleaned up version - lowercase with hyphens
+			$restrictions = $item['wholesale_only'] === 'Yes' ? 'wholesale-only' : 'none';
+			update_post_meta ($post_id, BBZ_PM_RESTRICTIONS, $restrictions);
+			if (!empty ($item['release_date'])) {
+				update_post_meta ($post_id, BBZ_PM_RELEASE_DATE, $item['release_date']);
+			} else delete_post_meta ($post_id, BBZ_PM_RELEASE_DATE);
+			//reset some meta we no longer use - can be deleted once database is cleaned
+ 			update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'all');
 
 			//$items [ $sku ]['pid'] = $product->ID;
 			if ($item['status'] == 'active') {
@@ -119,11 +125,11 @@ class bbz_products {
 				update_post_meta ($post_id, 'wholesale_customer_wholesale_price', $item['wsp']);
 				update_post_meta ($post_id, 'wholesale_customer_have_wholesale_price', 'yes');
 				update_post_meta ($post_id, BBZ_PM_ZOHO_ID, $item['zoho_id']);
-				if ($item['wholesale_only'] === 'Yes'  ) {
-					update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
-				} else {
-					update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'all');
-				}			
+				//if ($restrictions === 'wholesale_only') {
+				//	update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
+				//} else {
+				//	update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'all');
+				//}			
 
 				$product->set_price ($item['rrp']);  //set active price
 				if (!empty ($item['orp']) && $item['orp'] > $item['rrp']) { 
@@ -175,13 +181,8 @@ class bbz_products {
 					} else $warnings [] = 'missing-weight';
 					
 					
-					// Are backorders allowed (wholesale only)?
-					if ( in_array ($availability, BBZ_AVAIL_SOON)) {
-					// Only allow backorders for availability types that will be available soon
-						$product->set_backorders ('notify');
-					} else {
-						$product->set_backorders ('no');
-					}
+					// Set default backorders value - will be overridden dynamically
+					$product->set_backorders (bbz_default_backorders($post_id));
 					
 					// Deal with stock and availability
 					$product->set_manage_stock (true) ;  // Ensure stock management enabled
@@ -189,30 +190,20 @@ class bbz_products {
 					if ($product->get_low_stock_amount() == 0) {
 						$product->set_low_stock_amount(3);  //set warning level to 3 if not set
 					}
-					$product->set_catalog_visibility ('visible'); // ensure it's visible
-
-					if ( $item['stock'] <= 0) {		// Do we have physical stock?
-						// No stock available
-
-						if ('pre-order' == $availability ) {
-							// set pre-order items to be in stock
-							//$product->set_manage_stock (false) ;  // disable stock management
-							//$product->set_stock_status ('outofstock');
-							$product->set_backorders ('yes');
-						} else {
-							// Restrict out of stock items to wholesale
-							update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
-						}
+					if ($item['stock'] > 0 && in_array ($availability, ['pre-order', 'coming-soon']) ) {
+						$warnings [] = 'Availability '.$availability.' now in stock';
 					}
+					// enable default visibility - can be overridden by visibility filter in bbz-availability module
+					$product->set_catalog_visibility (bbz_default_visibility ($post_id, $item['stock'])); 
 				}
 			
 			} else {  //product is inactive on zoho (not available)
 				$product->set_stock_status ('outofstock');
 				$product->set_stock_quantity (0);
 				$product->set_backorders ('no');
-				$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
+				$product->set_catalog_visibility ('search');  //only visible in searches
 				
-				update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
+				//update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
 
 			} 
 
@@ -220,8 +211,8 @@ class bbz_products {
 				$product->set_stock_status ('outofstock');
 				$product->set_stock_quantity (0);
 				$product->set_backorders ('no');
-				$product->set_catalog_visibility ('search');  //only visible in searches to wholesale customers
-				update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
+				$product->set_catalog_visibility ('search');  //only visible in searches
+				//update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
 				$warnings [] = 'no-zoho-item-data';
 		}
 		

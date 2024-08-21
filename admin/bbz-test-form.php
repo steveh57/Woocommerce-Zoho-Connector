@@ -27,6 +27,7 @@ class bbz_test_form extends bbz_admin_form {
 						'get-user'			=> 'Get woo user (key=user id)',
 						'get-shipping-classes' => 'Get wc shippng classes',
 						'get-product-detail'	=> 'Call product function (key=product_id, value=function)',
+						'availability'		=> 'Check product availability filters (key=product_id, value=user_id)',
 						
 						'call-function'		=> 'Call function filterkey(filtervalue)',
 						
@@ -96,6 +97,36 @@ class bbz_test_form extends bbz_admin_form {
 
 		case 'get-user':
 			$data = get_userdata ( $filterkey);
+			break;
+			
+		case 'availability':
+			$product_id = $filterkey;
+			$user_id = $filtervalue;
+			$product = wc_get_product ( $product_id);
+			$data = array (
+				'Product' => array(
+					'name' => $product->get_name(),
+					'is_visible' => $product->is_visible(),
+					'is_purchasable' => $product->is_purchasable(),
+					'get_backorders' => $product->get_backorders(),
+					'get_stock_status' => $product->get_stock_status(),
+					'get_stock_quantity' => $product->get_stock_quantity() ),
+				'User role' => get_user_by('ID', $user_id)->roles,
+				'BBZ_PM_AVAILABILITY' => get_post_meta ($product_id, BBZ_PM_AVAILABILITY, true),
+				'BBZ_PM_RESTRICTIONS' => get_post_meta ($product_id, BBZ_PM_RESTRICTIONS, true),
+				'BBZ_PM_INACTIVE_REASON' => get_post_meta ($product_id, BBZ_PM_INACTIVE_REASON, true),
+				'bbz_default_visibility' => bbz_default_visibility ($product_id, $product->get_stock_quantity()),
+				'bbz_availability_filter' => bbz_availability_filter( array(), $product, $user_id ),
+				'bbz_availability_text' => bbz_availability_text ($product_id, $user_id),
+				'bbz_get_availability' => bbz_get_availability ($product_id, $user_id),
+				'bbz_is_visible' => bbz_is_visible (false, $product_id, '', $user_id),
+				'bbz_add_to_cart_button_text' => bbz_add_to_cart_button_text ("Default", $product, $user_id ),
+				'bbz_is_purchasable' => (bbz_is_purchasable( true, $product, $user_id )? 'true': 'false'),
+				'bbz_get_backorders' => bbz_get_backorders( 'no', $product, $user_id),
+				'bbz_get_stock_status' => bbz_get_stock_status( $product->get_stock_status(), $product, $user_id),
+
+			);
+		
 			break;
 			
 
@@ -277,7 +308,7 @@ class bbz_test_form extends bbz_admin_form {
 			echo '<br>No data returned';
 		}
 		$this->options->reload();
-		$this->options->delete ('function', true);
+		//$this->options->delete ('function', true);
 
 		
 		$data= array ('Options'=>$this->options->getall());

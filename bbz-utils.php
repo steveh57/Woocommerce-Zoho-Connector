@@ -204,6 +204,21 @@ function bbz_is_wholesale_customer ($user_id = '') {
 	}
 	return false;
 }
+function bbz_is_admin ($user_id = '') {
+	$user = false;
+	if (!empty($user_id)) {
+		$user = get_user_by ('id', $user_id);
+	} elseif ( is_user_logged_in()) {
+		$user = wp_get_current_user();
+	}
+	
+	if (is_object ($user) ) {
+		foreach ($user->roles as $role) {
+			if ('administrator' == $role) return true;
+		}
+	}
+	return false;
+}
 
 function bbz_email_admin ($subject, $message='') {
 	bbz_debug (array ('Subject'=>$subject, 'Message'=>$message), 'Email to Admin');

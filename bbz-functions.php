@@ -158,67 +158,14 @@ function bbz_add_google_tracking_code( $ga_function ) {
 	echo "{$ga_function}( 'set', 'dimension1', '$role' );";
 }
 
-/*********
- * Availability text filter
- *
- * Removes "(can be backordered)" from the In stock message
- */
-add_filter( 'woocommerce_get_availability', 'bbz_availability_filter', 20, 2);
-
-function bbz_availability_filter( $availability ) {
-	// parameter is array with
-	// 'availability' => availability text
-	// 'class' => 'out-of-stock', 'available-on-backorder', 'in-stock';
-	$text = $availability['availability'];
-	global $post;
-	$zoho_code = get_post_meta ($post->ID, BBZ_PM_AVAILABILITY, true);
-	$zoho_text = get_post_meta ($post->ID, BBZ_PM_INACTIVE_REASON, true);
-	switch ($availability['class']) {
-		case 'out-of-stock':
-			$text = !empty ($zoho_text) ? $zoho_text : 'Not available';
-			break;
-	
-		case 'available-on-backorder':
-			if (in_array ($zoho_code, BBZ_AVAIL_PRE)) {
-				$text = 'Available to pre-order';
-			} else {
-				$text = !empty ($zoho_text) ? $zoho_text." - available to backorder" : 'Available to backorder';
-			}
-			break;
-			
-		default:
-			$text = str_replace (' (can be backordered)', '', $text);
-	}
-	$availability['availability'] = $text;
-	return $availability;
-}
-/**********
-* ADD TO CART TEXT
-*
-* Change add to cart text for pre-orders and backorders
-*******/
-
-
-add_filter( 'woocommerce_product_single_add_to_cart_text', 'bbz_add_to_cart_button_text', 10, 2 ); 
-add_filter( 'woocommerce_product_add_to_cart_text', 'bbz_add_to_cart_button_text', 10, 2 );
-function bbz_add_to_cart_button_text ( $add_to_cart_text, $product ) {
-	if ($product->is_on_backorder() ) {
-		$zoho_code = $product->get_meta (BBZ_PM_AVAILABILITY, true);
-		if (in_array ($zoho_code, BBZ_AVAIL_PRE)) {
-			$add_to_cart_text = 'Pre-order';
-		} else {
-			$add_to_cart_text = 'Backorder';
-		}
-	}
-    return $add_to_cart_text; 
-}
 
 
 /*********
+ * WWOF PLUGIN NO LONGER USED
  * Availability text filter for trade order form
  *
  * Replaces 'out of stock' with more informative message
- */
+ 
 add_filter( 'wwof_filter_product_item_action_controls', 'bbz_wwof_availability_filter', 20, 3);
 
 function bbz_wwof_availability_filter( $action_field, $product, $alternate ) {
@@ -241,26 +188,8 @@ function bbz_wwof_availability_filter( $action_field, $product, $alternate ) {
 	}
 	return $action_field;
 }
-
-/* Purchasable [sic] filter
-* 
-* stops backordered items being sold to retail customers.
 */
 
-add_filter( 'woocommerce_is_purchasable', 'bbz_is_purchasable_filter', 20, 2);
-
-function bbz_is_purchasable_filter( $purchasable, $product ) {
-	if ($purchasable && in_array ($product->get_stock_status(), array ('onbackorder', 'outofstock'))) {
-		$availability = $product->get_meta (BBZ_PM_AVAILABILITY, true);
-		if (bbz_is_wholesale_customer()) {
-			if (!in_array ($availability, BBZ_AVAIL_SOON) ) return false;
-		} else {  // retail customer - allow pre orders
-			if (!in_array ($availability, BBZ_AVAIL_PRE)) return false;
-		}
-		
-	}
-	return $purchasable;
-}
 
 /******
 * Wholesale original price filter
@@ -492,25 +421,4 @@ function bbz_get_author_slugs () {
 	return implode($terms);
 }
 
-/******
-*	Add content around add to cart button on single product page.
-*****
-//add_filter( 'woocommerce_loop_add_to_cart_link', 'storeapps_before_after_btn', 10, 3 );
-//add_action( 'woocommerce_before_add_to_cart_form', 'bbz_before_add_to_cart_form' );
-function bbz_before_add_to_cart_form(){
-     echo '<p>bbz_before_add_to_cart_form</p>';
- }
-//add_action( 'woocommerce_before_add_to_cart_button', 'bbz_before_add_to_cart_button' );
-function bbz_before_add_to_cart_button(){
-     echo '<p>bbz_before_add_to_cart_button</p>';
- }
 
- //add_action( 'woocommerce_after_variations_table', 'bbz_after_variations_table' );
-function bbz_after_variations_table(){
-     echo '<p>bbz_after_variations_table</p>';
- }
-// add_action( 'woocommerce_after_variations_form', 'bbz_after_variations_form' );
-function bbz_after_variations_form(){
-     echo '<p>bbz_after_variations_form</p>';
- }
- */

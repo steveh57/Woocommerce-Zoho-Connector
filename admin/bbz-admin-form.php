@@ -127,14 +127,18 @@ class bbz_admin_form {
 		$action = 'bbzsave';
 		
 		//set field values
+		//if there is an existing value from previous filling, use that
 		// if field has a value in the form, then use that
 		//	else if there's a value in the $values array, then use that
 		//	else if there's an 'init' value in the form use that
 		foreach ($fields as $field_id => &$field) {
+			$value = $this->options->get($field_id);
+			if (!empty($value)) $field['value'] = $value;
 			if ( !isset ($field['value']) ) {
 				if (isset ($values [ $field_id ]) ) {
 					$field['value'] = $values [ $field_id ];
 				} else {
+				
 					if (isset ($field['init'] ) ) {
 						$field ['value'] = $field['init'];
 					}

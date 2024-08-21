@@ -45,6 +45,8 @@ define ('BBZ_PM_INACTIVE_REASON', 'bbz_inactive_reason');
 define ('BBZ_PM_WHOLESALE_DISCOUNT', 'bbz_wholesale_discount');
 define ('BBZ_PM_DIMENSION_STRING', 'bbz_dimension_string');
 define ('BBZ_PM_AVAILABILITY', 'bbz_availability');
+define ('BBZ_PM_RESTRICTIONS', 'bbz_restrictions');
+define ('BBZ_PM_RELEASE_DATE', 'bbz_release_date');
 
 // Post Meta tags for orders
 define ('BBZ_PM_ZOHO_ORDER_ID', 'zoho_order_id');
@@ -64,10 +66,6 @@ define ('BBZ_OP_GUESTID', 'guestuserid');
 define ('ZOHO_PAYPAL_ACCOUNT_ID', '1504573000005379057');
 define ('ZOHO_STRIPE_ACCOUNT_ID', '1504573000000149167');
 
-// Stock availability constants - must match values used in Zoho items Availability (fka Inactivity Reason) field
-define ('BBZ_AVAIL_OFF', array ('out-of-print', 'delisted', 'no-longer-available', 'replaced-by-new-edition'));
-define ('BBZ_AVAIL_SOON', array ('available', 'pre-order', 'special-order'));  //Allows backorders on these items
-define ('BBZ_AVAIL_PRE', array ('pre-order'));
 
 // Constants for Trackingmore connection
 define ('BBZ_TM_URL', 'https://api.trackingmore.com/v4/');
