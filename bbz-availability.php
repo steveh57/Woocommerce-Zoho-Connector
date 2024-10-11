@@ -28,10 +28,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 ******/
 
 // Define availability codes to allow backorders for wholesale and retail customers
-define ('BBZ_AVAIL_WHOLESALE_BACKORDER', ARRAY ('available', 'pre-order', 'coming-soon', 'special-order'));
+define ('BBZ_AVAIL_WHOLESALE_BACKORDER', ARRAY ('available', 'outofstock', 'pre-order', 'coming-soon', 'special-order'));
 define ('BBZ_AVAIL_RETAIL_BACKORDER', ARRAY ('pre-order'));
 // Define availability codes to allow purchasing for wholesale and retail customers
-define ('BBZ_AVAIL_WHOLESALE_PURCHASE', ARRAY ('available', 'pre-order', 'coming-soon', 'special-order'));
+define ('BBZ_AVAIL_WHOLESALE_PURCHASE', ARRAY ('available', 'outofstock', 'pre-order', 'coming-soon', 'special-order'));
 define ('BBZ_AVAIL_RETAIL_PURCHASE', ARRAY ('available', 'pre-order'));
 // Define availability code to allow pre-order - same for both retail and wholesale customers
 define ('BBZ_AVAIL_PRE', array ('pre-order'));
@@ -47,11 +47,33 @@ function bbz_default_backorders ($product_id) {
 	return in_array ($availability, BBZ_AVAIL_WHOLESALE_BACKORDER);
 }
 function bbz_default_visibility ($product_id, $stock) {
-	//visible if: in stock OR pre-order OR special-order
+	//visible if it's available to purchase
 	$availability = get_post_meta ($product_id, BBZ_PM_AVAILABILITY, true);
 	return in_array ($availability, BBZ_AVAIL_WHOLESALE_PURCHASE) ? 'visible' : 'search';
 }
 
+/******
+* bbz_set_availability
+*
+* Creates the value to be stored in the BBZ_PM_AVAILABILITY post meta
+* based on the text from the Availability field in Zoho Item
+* - A sanitised version is created (lowercase, spaces replaced by hyphen)
+* - blank fields are set to 'available' (or 'not-available' if item is inactive)
+* - in stock items (apart from special order) are set to 'available'
+* - out of stock items with code 'available' are set to 'outofstock'
+*****/
+
+function bbz_set_availability ($item) {
+	if (empty ($item['availability'])) {
+		$availability = $item['status'] == 'active' ? 'available' : 'not-available';
+	} else {
+		$availability = str_replace(' ', '-', strtolower ($item['availability']));
+	}
+	if ($availability === 'available' && $item['stock'] <= 0) {
+		$availability = 'outofstock';
+	} elseif ($availability !== 'special-order' && $item['stock'] > 0 ) $availability = 'available';
+	return $availability;
+}
 
 /*****
 * bbz_is_restricted
@@ -84,7 +106,7 @@ function bbz_is_restricted ($product_id, $user_id='') {
 *	Any release date set in Zoho
 *
 * Parameters
-* 	product_id	post/product id from wordpress/woocommerce
+* 	product		WC_product objuect or post/product id from wordpress/woocommerce
 *	user_id		optional - defaults to current user
 *
 * Returns an array
@@ -102,15 +124,23 @@ function bbz_is_restricted ($product_id, $user_id='') {
 *******/
 
 
-function bbz_get_availability ($product_id, $user_id='') {
+function bbz_get_availability ($product, $user_id='') {
+	if (is_object($product)) {
+		$product_id = $product->get_id();
+	} elseif (is_numeric($product)) {
+		$product_id = $product;
+		$product = wc_get_product ($product_id);
+	} else return false;
+	if (empty($product)) return false;
+	
 	$availability = get_post_meta ($product_id, BBZ_PM_AVAILABILITY, true);
-	$product = wc_get_product ($product_id);
+	$stock = $product->get_stock_quantity();
+	
 	$wholesale = bbz_is_wholesale_customer ($user_id);
 	
 	// is item released yet? (if no date, assume yes)
 	$release_date = get_post_meta ($product_id, BBZ_PM_RELEASE_DATE, true);
-	$released = empty ($release_date) ? true : strtotime ($release_date) >= strtotime ('today');
-	$stock = $product->get_stock_quantity();
+	$released = empty ($release_date) ? true : strtotime ($release_date) <= strtotime ('today');
 	
 	$result = array(
 		'stock' => $stock,
@@ -123,7 +153,7 @@ function bbz_get_availability ($product_id, $user_id='') {
 			? in_array ($availability, BBZ_AVAIL_WHOLESALE_PURCHASE) 
 			: in_array ($availability, BBZ_AVAIL_RETAIL_PURCHASE),
 		);
-	if ($stock==0 && $availability === 'available') $result['reason'] = 'Out of Stock';	
+	if (($stock<=0 && $availability === 'available') || $availability === 'outofstock')  $result['reason'] = 'Out of Stock';	
 	
 
 	// Check if restricted: wholesale only or retail only
@@ -161,7 +191,7 @@ function bbz_availability_text ($product_id, $user_id = '', $availability='') {
 	if (!is_array ($availability)) $availability = bbz_get_availability ($product_id, $user_id);
 	$text = 'Not available'; //default
 	
-	switch ($availability['code']) {
+	if (is_array($availability)) switch ($availability['code']) {
 		case 'available':
 			if ($availability['stock'] > 30) {
 				$text = 'More than 30 in stock';
@@ -222,7 +252,7 @@ function bbz_availability_filter( $stock_status, $product, $user_id='' ) {
 		
 	$product_id = $product->get_id();
 	$reason = get_post_meta ($product_id, BBZ_PM_INACTIVE_REASON, true);
-	$availability = bbz_get_availability ($product_id, $user_id);
+	$availability = bbz_get_availability ($product, $user_id);
 	
 	return array (
 		'availability' => bbz_availability_text($product_id, $user_id, $availability),
@@ -282,7 +312,7 @@ function bbz_is_visible ($visible, $product_id, $user_id='') {
 
 // internal function returns true or false depending on product and user role
 function bbz_backorders_allowed ($product, $user_id) {
-	return bbz_get_availability ($product->get_id(), $user_id)['backorder'];
+	return bbz_get_availability ($product, $user_id)['backorder'];
 }
 // Filter called from wc_product->get_backorders
 // return yes, no or notify
@@ -325,7 +355,7 @@ function bbz_cart_item_backorder_notification ($text, $product_id, $user_id='') 
 */
 add_filter( 'woocommerce_is_purchasable', 'bbz_is_purchasable', 20, 2);
 function bbz_is_purchasable( $purchasable, $product, $user_id='' ) {
-	return $purchasable && bbz_get_availability ($product->get_id(), $user_id)['purchasable'];
+	return $purchasable && bbz_get_availability ($product, $user_id)['purchasable'];
 }
 
 /**********
@@ -338,7 +368,7 @@ add_filter( 'woocommerce_product_single_add_to_cart_text', 'bbz_add_to_cart_butt
 add_filter( 'woocommerce_product_add_to_cart_text', 'bbz_add_to_cart_button_text', 10, 2 );
 
 function bbz_add_to_cart_button_text ( $add_to_cart_text, $product, $user_id='' ) {
-	$availability = bbz_get_availability ($product->get_id(), $user_id);
+	$availability = bbz_get_availability ($product, $user_id);
 	if ($availability['purchasable'])
 		
 	switch ($availability['code']) {

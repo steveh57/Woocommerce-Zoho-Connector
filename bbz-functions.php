@@ -418,7 +418,7 @@ function bbz_get_author_slugs () {
 	$post_id = get_queried_object_id();
 	$args = array('fields'=>'slugs');
 	$terms = wp_get_post_terms($post_id, 'pa_author-2', $args);
-	return implode($terms);
+	return implode(',', $terms);
 }
 
 

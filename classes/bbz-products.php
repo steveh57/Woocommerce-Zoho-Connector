@@ -107,8 +107,8 @@ class bbz_products {
 		$sku = $product->get_sku();
 		if ( !empty($sku) && isset ($this->items[$sku]) ) {	// have we got zoho data for this sku?
 			$item = $this->items[$sku];
-			$availability = empty ($item['availability']) ? 'available' : str_replace(' ', '-', strtolower ($item['availability']));
-			// x if expected soon, and now in stock, set availability as available
+			$availability = bbz_set_availability ($item);
+			//$availability = empty ($item['availability']) ? 'available' : str_replace(' ', '-', strtolower ($item['availability']));
 			update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
 			update_post_meta ($post_id, BBZ_PM_AVAILABILITY, $availability); //cleaned up version - lowercase with hyphens
 			$restrictions = $item['wholesale_only'] === 'Yes' ? 'wholesale-only' : 'none';
