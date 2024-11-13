@@ -29,6 +29,7 @@ include_once ( BBZ_CLASSPATH . '/bbz-zoho-connector.php');
 include_once ( BBZ_CLASSPATH . '/bbz-zoho-shipmentorders.php');
 include_once ( BBZ_CLASSPATH . '/bbz-order.php');
 include_once ( BBZ_ADMINPATH . '/bbz-admin-form.php');
+include_once ( BBZ_ADMINPATH . '/bbz-order-entry-form.php');
 include_once ( BBZ_ADMINPATH . '/bbz-test-form.php');
 include_once ( BBZ_ADMINPATH . '/bbz-test-zoho-form.php');
 include_once ( BBZ_ADMINPATH . '/bbz-linkuser-form.php');

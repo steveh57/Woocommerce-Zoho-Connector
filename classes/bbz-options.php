@@ -76,8 +76,17 @@ class bbz_options {
 		if ($save) $this->save();
 	}
 	
-	public function delete ($option_name='', $save=false) {
-		unset ($this->options [$option_name]);
+	/******
+	*	delete - delete one or more options
+	*	$option - a single option name, or an array of option names
+	******/
+	
+	public function delete ($option='', $save=true) {
+		if (is_array($option)) {
+			foreach ($option as $option_name) {
+				unset ($this->options [$option_name]);
+			}
+		} else unset ($this->options [$option]);
 		if ($save) $this->save();
 
 	}

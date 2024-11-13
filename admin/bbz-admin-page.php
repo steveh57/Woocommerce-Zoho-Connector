@@ -82,6 +82,7 @@ class bbz_admin_page {
 			<a href="?page=bbz-admin-page&tab=link-user" class="nav-tab <?php echo $active_tab == 'link-user' ? 'nav-tab-active' : ''; ?>">Link User</a>
 			<a href="?page=bbz-admin-page&tab=zoho-test" class="nav-tab <?php echo $active_tab == 'zoho-test' ? 'nav-tab-active' : ''; ?>">Zoho Tests</a>
 			<a href="?page=bbz-admin-page&tab=test" class="nav-tab <?php echo $active_tab == 'test' ? 'nav-tab-active' : ''; ?>">Other Tests</a>
+			<a href="?page=bbz-admin-page&tab=order" class="nav-tab <?php echo $active_tab == 'order' ? 'nav-tab-active' : ''; ?>">Order Entry</a>
 
 		</h2>
 <?php		
@@ -120,6 +121,10 @@ class bbz_admin_page {
 				// Testing form
 				$form = new bbz_test_form() ;
 				break;
+			case 'order':
+				$form = new bbz_orderentry_form();
+				break;
+			
 		}
 		$form->render ();
 		

@@ -37,7 +37,8 @@ class bbz_test_form extends bbz_admin_form {
 						'delete-user-meta'	=> 'Delete user meta (key=user_id or ALL, val=meta key (required)',
 						'get-post-meta'		=> 'Get post meta (key=post id, val=meta key(optional)',
 						'show-options'		=> 'Show bbz option data',
-						'set-option'		=> 'Set bbz option (key)',
+						'set-option'		=> 'Set bbz option (key=>value)',
+						'delete-option'		=> 'Delete bbz option(s)(key)',
 						'product-filter'	=> 'Test product filter',
 						'add-shipping-addresses' => 'Add a new shipping address (key=ALL or val=user id',
 						'get_cross_sells'	=> 'Get all product cross sells',
@@ -69,8 +70,8 @@ class bbz_test_form extends bbz_admin_form {
 
 
 	function __construct () {
-		parent::__construct($this->testform);
 
+		parent::__construct($this->testform);
 	}
 	
 	public function action () {
@@ -187,7 +188,12 @@ class bbz_test_form extends bbz_admin_form {
 			$this->options->update ($filter);
 			$data = $this->options->getall();
 			break;
-
+			
+		case 'delete-option':
+			$this->options->delete (explode(',',$filterkey));
+			$data = $this->options->getall();
+			break;
+			
 		case 'show-order':
 			$order_id = $filterkey;
 			$data['order'] = wc_get_order($order_id);// ($order_id);

@@ -136,7 +136,10 @@ class bbz_products {
 					// if an original price is set, (and greater than RRP) set RRP as sale price
 					$product->set_regular_price ($item['orp']);
 					$product->set_sale_price ($item['rrp']);
-					
+					if (!empty ($item['release_date'])) {
+						$product->set_date_on_sale_from ($item['release_date']);
+					}
+				
 				} else {
 					$product->set_regular_price ($item['rrp']);
 					$product->set_sale_price ('');  //make sure sale price is cleared

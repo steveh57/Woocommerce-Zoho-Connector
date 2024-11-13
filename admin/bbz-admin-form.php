@@ -155,7 +155,7 @@ class bbz_admin_form {
 		}
 */
 ?>
-    <form method="post" action="<?php echo esc_html( admin_url ('admin-post.php') ); ?>">
+    <form method="post" enctype="multipart/form-data" action="<?php echo esc_html( admin_url ('admin-post.php') ); ?>">
 	    <div id="universal-message-container">
 <?php
 		if (isset ($this->form['title'])) echo $this->form['title'];
@@ -172,7 +172,7 @@ class bbz_admin_form {
 <?php	
 
 		foreach ($fields as $field_id => $field) { 
-			if (!($field['type'] == 'hidden')) {	// Don't display label for hidden fields
+			if (!in_array($field['type'], array('hidden', 'submit'))) {	// Don't display label for hidden fields
 ?>
 					<tr>
 						<td><label><?php echo $field['title'] ?></label></td>
@@ -218,12 +218,23 @@ class bbz_admin_form {
 						}
 					}
 					echo '>';
+					echo '</textarea>';
 					break;
 				case 'checkbox':
 					echo '<input type=checkbox';
 					if (isset($field['value']) && $field['value']=='on') {
 						echo ' checked';
 					}
+					echo ' name='.$field_id;
+					if (isset($field['attributes'])) {
+						foreach ($field['attributes'] as $att=>$value) {
+							echo ' '.$att.'="'.$value.'"';
+						}
+					}
+					echo '>';
+					break;
+				case 'file':
+					echo '<input type=file';
 					echo ' name='.$field_id;
 					if (isset($field['attributes'])) {
 						foreach ($field['attributes'] as $att=>$value) {
@@ -239,7 +250,7 @@ class bbz_admin_form {
 					if (isset($field['value'])) {
 						echo ' value="'.$field['value'].'"';
 					}
-					echo ' name='.$field_id;
+					echo ' name=', isset($field['name'])?$field['name']:$field_id;
 					if (isset($field['attributes'])) {
 						foreach ($field['attributes'] as $att=>$value) {
 							echo ' '.$att.'="'.$value.'"';
@@ -247,7 +258,7 @@ class bbz_admin_form {
 					}
 					echo '>';
 			}
-			if (!($field['type'] == 'hidden')) {
+			if (!in_array($field['type'], array('hidden', 'submit'))) {
 ?>
 						</td>
 					</tr>
@@ -259,13 +270,16 @@ class bbz_admin_form {
 			<input type="hidden" name="action" value=<?php echo '"'.SAVE_ACTION.'"' ?>; >
 <?php
 		$this->add_nonce ();  //add nonce and form name for security
-		$button = $this->form['button'];
-		submit_button($button['title'], $button['type'], $button['name'], TRUE, isset($button['attributes']) ? $button['attributes'] : '');
+		if (isset($this->form['button'])) {
+			$button = $this->form['button'];
+			submit_button($button['title'], $button['type'], $button['name'], TRUE, isset($button['attributes']) ? $button['attributes'] : '');
+		}
 ?>
 		</div><!-- #universal-message-container -->
     </form>
 <?php
 	}
+	
 	
      /**
      * Add the nonce field using the form name
@@ -295,7 +309,11 @@ class bbz_admin_form {
 			foreach ($this->form['fields'] as $field_id => $field) {
 				// If the above are valid, sanitize and save the option.
 				if ( isset ($_POST[$field_id] ) && null !== wp_unslash( $_POST[$field_id] ) ) {
-					$results[$field_id] = sanitize_text_field( $_POST[$field_id] );
+					if ($field['type'] = 'textarea') {
+						$results[$field_id] = sanitize_textarea_field( $_POST[$field_id] );
+					} else {
+						$results[$field_id] = sanitize_text_field( $_POST[$field_id] );
+					}
 				} elseif ($field['type'] = 'checkbox') {  // special case for unset checkbox
 					$results[$field_id] = 'off';
 				}

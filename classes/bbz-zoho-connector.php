@@ -471,7 +471,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 * Returns the created salesorder array from zoho or wp_error
 ****/	
 
-	public function create_salesorder ($order, $confirm=false) {
+	public function create_salesorder ($order, $confirm=true) {
 	
 		if (! is_array($order) ) return false;
 		
@@ -485,6 +485,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				'order'=>$order));
 			return $response;
 		}
+		if (!$confirm) return $response;
 		
 		if (isset ($response['salesorder']['salesorder_id'])) {
 			// now confirm the salesorder
@@ -501,7 +502,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 			return new WP_Error ('bbz-zcon-026', 'Zoho create_salesorder failed', array(
 				'order'=>$order,
 				'response'=>$response));
-		}	
+		}
+		
 	}	
 	
 	/****

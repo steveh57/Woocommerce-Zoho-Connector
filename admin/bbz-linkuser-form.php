@@ -81,8 +81,7 @@ class bbz_linkuser_form extends bbz_admin_form {
 			echo '<pre>';
 			print_r (get_user_meta ($webuser,'',true));
 			echo '</pre>';
-			$this->options->delete('webuser');
-			$this->options->delete('zohouser', true);
+			$this->options->delete(array ('zohouser', 'webuser'));
 		
 		}
 	}

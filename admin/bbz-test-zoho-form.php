@@ -31,7 +31,7 @@ class bbz_test_zoho_form extends bbz_admin_form {
 						'get-names'			=> 'Get Zoho customer names',
 						'get-contact'		=> 'Get Zoho contact by email address (filtervailue)',
 						'get-contact-id'	=> 'Get Zoho contact by id (filtervailue)',
-						'get-addresses'		=> 'Get Zoho addresses for customer id',
+						'get-addresses'		=> 'Get Zoho addresses for customer id (filtervailue)',
 						'get-sales-history'	=> 'Get Zoho sales history',
 						'get_salesorder'	=> 'Get Zoho salesorder (dataset=zoho order id)',
 						'confirm-order'		=> 'Confirm sales order (key=zoho order id)',
@@ -203,17 +203,13 @@ class bbz_test_zoho_form extends bbz_admin_form {
 			echo '<br>No data returned';
 		}
 		$this->options->reload();
-		$this->options->delete ('function', true);
-
 		
 		$data= array ('Options'=>$this->options->getall());
 		echo '<pre>'; print_r ($data); echo '</pre>';
 		
-		
+
+	
 	}
-
-
-
 
 }
 ?>
