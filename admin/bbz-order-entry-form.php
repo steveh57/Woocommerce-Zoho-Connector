@@ -165,7 +165,9 @@ class bbz_orderentry_form extends bbz_admin_form {
 				'value' => (float)$row [8]
 			);
 		}
-		// $order['tables']=$tables; //for debugging
+		$order['total'] = $tables[3]['tfoot'][0][6];
+		
+		//$order['tables']=$tables; //for debugging
 		return $order;
 	}
 	
@@ -233,6 +235,7 @@ class bbz_orderentry_form extends bbz_admin_form {
 		if (!empty ($order) ) {
 			$zoho = new zoho_connector;
 			$zoho_items = $zoho->get_items();
+			$order['zoho_total'] = 0;
 			foreach ($order['items'] as $line=>$order_item) {
 				$sku = $order_item['isbn'];
 				if (!empty($sku) && !empty($zoho_items[$sku])) {
@@ -245,8 +248,13 @@ class bbz_orderentry_form extends bbz_admin_form {
 						if (isset ($order_item['cost']) && $zoho_items[$sku]['wsp'] != $order_item['cost'])
 							$order['items'][$line]['warning'] = 'Cost price change';
 						$order['items'][$line]['stock'] =  $zoho_items[$sku]['stock'];
-						if (isset ($order_item['qty']) && $zoho_items[$sku]['stock'] < $order_item['qty'])
-							$order['items'][$line]['warning'] = 'Insufficient stock';
+						if (isset ($order_item['qty'])) {
+							if( $zoho_items[$sku]['stock'] < $order_item['qty']) $order['items'][$line]['warning'] = 'Insufficient stock';
+							$order['zoho_total'] += $order_item['qty'] * $zoho_items[$sku]['wsp'];
+						} else {
+							$order['items'][$line]['qty'] = 0;
+							$order['items'][$line]['warning'] = 'No quantity specified';
+						}
 					}
 				} else {
 					$order['items'][$line]['warning'] = 'No product match in Zoho';
@@ -272,7 +280,7 @@ class bbz_orderentry_form extends bbz_admin_form {
 		
 		// Iterate Through Items
 		foreach ($order['items'] as $item ) {
-			if (!empty($item['zoho_id'])) {
+			if (!empty($item['zoho_id']) && !empty($item['qty']) ) {
 				$zoho_line = array();
 				// Do we need the product id or the variation id?
 				$zoho_line ['item_id'] = $item['zoho_id'];
@@ -337,7 +345,10 @@ class bbz_orderentry_form extends bbz_admin_form {
 			$order_table .= '<td>'.(isset($line['warning'])?$line['warning']:'').'</td>';
 			$order_table .= '</tr>';
 		}
-		$order_table .= '</table>';
+		$order_table .= '<tr><td></td><td></td><td></td><td>Totals</td>';
+		$order_table .= '<td>'.(isset($order['total'])?$order['total']:'').'</td>';
+		$order_table .= '<td>'.(isset($order['zoho_total'])?$order['zoho_total']:'').'</td>';
+		$order_table .= '</tr></table>';
 		return $order_table;
 	}
 

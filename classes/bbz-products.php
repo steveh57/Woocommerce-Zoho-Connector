@@ -31,8 +31,8 @@ class bbz_products {
 		$result = $zoho->get_items();
 		if (is_wp_error ($result)) {
 			$result->add ('bbz-prod-00', 'get_items failed in bbz_products construct' );
-			return $result;
-		} else $this->items = $result;
+		}
+		$this->items = $result;  // if an error occurred it is saved in items
 		
 		// get list of product posts
 		$args = array (
@@ -68,6 +68,9 @@ class bbz_products {
 	* 
 	*******/
 	public function update_all () {
+		 // check for errors getting data from zoho before proceeding.
+		if (is_wp_error ($this->items)) return $this->items; // check no error occurred in construct
+			
 		$update_count = 0;
 		foreach ( $this->product_posts as $post ) {  // for each woo product
 			$product = wc_get_product ($post);
