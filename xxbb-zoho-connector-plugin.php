@@ -6,7 +6,7 @@
     Author:         Steve Haines
     Author URI:     http://www.unilake.co.uk/
     Version:        2.8.2
-	Release Date:	06/12/2024
+	Release Date:	05/12/2024
     Requirements:   PHP 5.4 or above, WordPress 3.4 or above.
 */
 
@@ -44,44 +44,33 @@ include_once ( BBZ_PATH . '/bbz-functions.php');  // miscellaneous actions and f
 include_once ( BBZ_PATH . '/bbz-cron.php');		// daily and hourly cron functions
 	
 
-
-// Submenu class - loads the plugin page to the Settings submenu
-class bbz_submenu {
-
-    private $submenu_page;
- 
-    public function __construct($page) {
-        $this->submenu_page = $page;
-        add_action( 'admin_menu', array( $this, 'add_options_page' ) );
-   }
- 
-    /**
-     * Creates the submenu item and calls on the Submenu Page object to render
-     * the actual contents of the page.
-     */
-    public function add_options_page() {
- 
-        add_options_page(
-            'BBZ Connector',
-            'BB Zoho Connector',
-            'manage_options',
-            'bbz-admin-page',
-            array( $this->submenu_page, 'render' )
-        );
-    }
-}
-
-// load the plugin admin page
+// Load admin page on menu once plugins are loaded.
  
 add_action( 'plugins_loaded', 'bbz_admin_settings' );
 
 function bbz_admin_settings() {
-
-    new bbz_submenu(new bbz_admin_page);
-
+	//new bbz_admin_menu();
+	add_action( 'admin_menu', 'bbz_add_options_page' );
 	add_action( 'admin_bar_menu', 'bbz_admin_bar_menu', 1000 );
+}
 
+// Add BB Zoho Connector to Admin Settings submenu
 
+	
+function bbz_add_options_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return; // security check.
+	}
+	$page =  new bbz_admin_page;
+	$page->init();
+	
+	add_options_page(
+		'BBZ Connector',
+		'BB Zoho Connector',
+		'manage_options',
+		'bbz-admin-page',
+		array( $page, 'render' )
+	);
 }
 	
 // Add a new menu item to the WP admin toolbar - quick access to order entry

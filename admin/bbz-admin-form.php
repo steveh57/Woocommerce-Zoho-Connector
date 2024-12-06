@@ -267,7 +267,7 @@ class bbz_admin_form {
 		} 
 ?>
 			</table>
-			<input type="hidden" name="action" value=<?php echo '"'.SAVE_ACTION.'"' ?>; >
+			<input type="hidden" name="action" value="bbz_save" >
 <?php
 		$this->add_nonce ();  //add nonce and form name for security
 		if (isset($this->form['button'])) {

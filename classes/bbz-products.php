@@ -31,8 +31,10 @@ class bbz_products {
 		$result = $zoho->get_items();
 		if (is_wp_error ($result)) {
 			$result->add ('bbz-prod-00', 'get_items failed in bbz_products construct' );
+			$this->items = $result;  // if an error occurred it is saved in items
+			return;
 		}
-		$this->items = $result;  // if an error occurred it is saved in items
+		$this->items = $result;  // store zoho data locally
 		
 		// get list of product posts
 		$args = array (

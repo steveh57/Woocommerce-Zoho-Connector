@@ -107,7 +107,10 @@ add_action ('bbz_hourly_cron', 'bbz_hourly_product_update');
 function bbz_hourly_product_update () {
 	$products = new bbz_products;
 	$result = $products->update_all();
-	// Don't bother to report errors on hourly update, too many emails
+	if (is_wp_error($result)) {
+		bbz_email_admin ('Hourly product update failed', $result);
+		return;
+	}
 }
 
 

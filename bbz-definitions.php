@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 
 //define ('NONCE_NAME', 'bbz-nonce');
-define ('SAVE_ACTION', 'bbz-save');
+//define ('SAVE_ACTION', 'bbz-save');
 define ('BBZ_OPTION_NAME', 'bbz-options');
 define ('ZOHO_AUTH_URL', 'https://accounts.zoho.com/oauth/v2/');
 define ('ZOHO_BOOKS_API_URL', 'https://www.zohoapis.com/books/v3/');

@@ -384,6 +384,8 @@ class bbz_order {
 		// Flag priority orders with PRIORITY in the ref field
 		if (false !== stristr($zoho_order ['delivery_method'], 'priority')) {
 			$zoho_order ['reference_number'] = 'PRIORITY '.$zoho_order ['reference_number'];
+		} elseif (false !== stristr($zoho_order ['delivery_method'], '1st')) {
+			$zoho_order ['reference_number'] = 'RM24 '.$zoho_order ['reference_number'];
 		}
 		$zoho_order['terms_default'] = true;
 		

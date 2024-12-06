@@ -25,9 +25,9 @@ class bbz_admin_page {
 		
 	protected $options;
 
-	public function init() {
+	function __construct () {
 		//  Add handler for form posts
-        add_action( 'admin_post_'.SAVE_ACTION, array( $this, 'save' ) );
+        add_action( 'admin_post_bbz_save', array( $this, 'save' ) );
 		// Add handler for Oauth return from Zoho to base url for site
 		add_action('init', array( $this, 'save_auth' ) );
 		$this->options = new bbz_options;
