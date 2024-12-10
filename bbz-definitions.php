@@ -20,7 +20,7 @@ define ('ZOHO_ANALYTICS_API_URL', 'https://analyticsapi.zoho.com/api/steve@bitte
 define ('ZOHO_AUTH_SCOPE', 'ZohoBooks.fullaccess.all,ZohoReports.data.read');
 
 // Zoho REST call timeout in seconds
-define ('BBZ_ZOHO_TIMEOUT', 60);
+define ('BBZ_ZOHO_TIMEOUT', 80);
 
 // Payment method names used by woocommerce payment gateways
 define ('BBZ_PAYMENT_METHOD_PAYPAL', 'ppcp-gateway');

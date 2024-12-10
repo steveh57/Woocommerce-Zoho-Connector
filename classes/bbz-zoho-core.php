@@ -134,8 +134,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		
 		if (!is_array($response)) {
 			if (is_wp_error ($response)) {
-				$error=$response->get_error_messages('http_request_failed');
-				if (is_string($error) && stripos($error, 'CURL error 28') !== false) {
+				if (in_array('cURL error 28', $response->get_error_messages('http_request_failed'))) {
 					$response->add ('zoho-timeout', 'Zoho request timed out');
 				} else {
 					$response->add('bbz-zc-002', 'Zoho request failed');

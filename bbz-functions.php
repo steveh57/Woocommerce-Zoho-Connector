@@ -229,9 +229,8 @@ function bbz_hide_shipping_when_free_is_available( $rates ) {
 add_action ('woocommerce_before_checkout_form', 'bbz_before_checkout');
 
 function bbz_before_checkout() {
-	bbz_update_payment_terms();
+	bbz_update_payment_terms(); // in module bbz_utils
 }
-
 
 /**
  * Order handling
@@ -247,7 +246,12 @@ if ( BBZ_DEBUG ) {
 
 function bbz_schedule_order_processing( $order_id ){	
 	// spawn cron job to process the order asap (short delay to allow current page to complete)
-	wp_schedule_single_event (time() + 30, 'bbz_process_order_hook', array ($order_id));
+	$response = wp_schedule_single_event (time() + 30, 'bbz_process_order_hook', array ($order_id), true);
+	if (is_wp_error($response) ) {
+		$response->add ('bbz-func-005', 'Scheduling single order processing', array(
+			"Order ID"=>$order_id));
+		bbz_email_admin ("Failed to create Zoho order", $response);
+	}
 }
 
 add_action ('bbz_process_order_hook', 'bbz_process_single_order', 10, 1);
