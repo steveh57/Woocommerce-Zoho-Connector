@@ -158,7 +158,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					'response'=> $zoho_data
 				));
 			} elseif (empty($zoho_data)) { // No JSON data. Zoho sometimes returns an HTML page if server is unavailable
-				if (isset($response[body]) && str_contains ($response[body], 'Temporarily Unavailable')) {
+				if (isset($response['body']) && str_contains ($response['body'], 'Temporarily Unavailable')) {
 					return new WP_Error ('zoho-unavailable', 'Zoho temporarily unavailable');
 				} else {
 					return new WP_Error ('bbz-zc-003A', 'No JSON data returned from request to Zoho_books', array(

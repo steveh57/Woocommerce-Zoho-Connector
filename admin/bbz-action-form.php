@@ -138,8 +138,9 @@ class bbz_action_form extends bbz_admin_form {
 				echo 'Error data: <pre>'.print_r ($result->get_error_data ($error_code), true)."</pre>\n";
 			}
 			exit;
-		}				
-
+		} else {
+			echo 'Results: <pre>'.print_r ($result)."</pre>\n";
+		}
 	}
 
 	public function display_data () {

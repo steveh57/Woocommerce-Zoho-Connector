@@ -234,10 +234,12 @@ function bbz_get_zoho_orders ($zoho_order_list = array()) {
 				$zoho_order = $response;  // this is the full order with package details
 				//find matching user if one exists
 				$wp_user_id = null;
+				/* This code is causing a problem where one zoho customer has multiple users
+				
 				$zoho_customer_id = strval($zoho_order['customer_id']);
 				if (isset($zoho_contact_index[$zoho_customer_id])) {
 					$wp_user_id = $zoho_contact_index[$zoho_customer_id]->user_id;
-				}
+				}*/
 				/*bbz_debug(array('zoho_order'=>$zoho_order,
 					'wp_user_id'=>$wp_user_id,
 					'zoho_customer_id'=>$zoho_customer_id,

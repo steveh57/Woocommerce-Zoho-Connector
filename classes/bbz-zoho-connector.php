@@ -57,7 +57,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			'item_type'	=> 'cf_item_type_unformatted',
 			'author'	=> 'cf_author_unformatted',
 			'release_date' => 'cf_release_date_unformatted',
-			
+			'trade_discount' => 'cf_trade_discount_unformatted'			
 		);
 		if (! $this->isconnected() ) return false;
 		

@@ -258,6 +258,10 @@ add_action ('bbz_process_order_hook', 'bbz_process_single_order', 10, 1);
 
 function bbz_process_single_order ( $order_id ) {
 	$order = new bbz_order ($order_id);
+	if ($order->get_woo_order_id () == false) {
+		bbz_email_admin ("Failed to process single order",
+			new WP_Error ('bbz-func-007', 'Invalid order id in process_single_order', array("Order ID"=>$order_id)));
+	}
 	if (false == $order->is_on_zoho()) {  // skip if it's already been loaded
 		$response = $order->process_new_order ();
 		if (is_wp_error($response) ) {

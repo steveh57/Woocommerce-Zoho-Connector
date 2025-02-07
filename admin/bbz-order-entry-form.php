@@ -90,7 +90,7 @@ class bbz_orderentry_form extends bbz_admin_form {
 			'button'		=> array (
 				'name'			=> 'submit',
 				'type'			=> 'primary',
-				'title'			=> 'Submit order'
+				'title'			=> 'Continue'
 			)			
 		)
 	);
@@ -184,6 +184,7 @@ class bbz_orderentry_form extends bbz_admin_form {
 		$order['po_number'] = $this->options->get('reference');
 		foreach ($orderlines as $line_no => $line) {
 			if (strlen(trim($line)) > 0) {
+				$line = str_replace ('-', '', $line);  // remove - in case isbn has - characters embedded
 				$fields = explode($separator, $line);
 				foreach ($fields as $field) {
 					$field = trim($field); //remove any spaces
