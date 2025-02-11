@@ -154,6 +154,7 @@ class bbz_products {
 				update_post_meta ($post_id, BBZ_PM_WHOLESALE_DISCOUNT, number_format($discount,1).'%');
 				$max_discount = empty($item['trade_discount']) ? BBZ_DISCOUNT_WARNING : $item['trade_discount']+1;
 				if ($discount > $max_discount) $warnings[] = 'High discount: '.number_format($discount,2).'%';
+				//, Max discount: '.number_format($max_discount,2).'%';
 				
 				if (!empty ($item['tax_class']) && isset ($this->tax_class_map[$item['tax_class']]) ) {
 					$product->set_tax_class ($this->tax_class_map[$item['tax_class']]);

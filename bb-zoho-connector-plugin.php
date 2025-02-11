@@ -5,8 +5,8 @@
     Description:    Elements to link Bittern Books website to Zoho
     Author:         Steve Haines
     Author URI:     http://www.unilake.co.uk/
-    Version:        2.8.4
-	Release Date:	10/12/2024
+    Version:        2.9.0
+	Release Date:	11/2/2025
     Requirements:   PHP 5.4 or above, WordPress 3.4 or above.
 */
 

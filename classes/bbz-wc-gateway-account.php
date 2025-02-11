@@ -201,6 +201,10 @@ class bbz_wc_gateway_account extends WC_Payment_Gateway {
 		// check zoho payment terms allows credit
 		$user_meta = new bbz_usermeta ();
 		$terms = $user_meta->get_payment_terms ();
+		if (!empty($terms ['name']) && $terms ['name'] == BBZ_PROFORMA) {
+			return parent::is_available();
+		}
+		//	
 		// -ve days is used for end of month payment terms in zoho
 		if (empty ($terms ['days'] ) || ($terms ['days'] >= 0 && $terms ['days'] < 10 )) return false;
 		if (isset($terms['available_credit']) && WC()->cart && $terms['available_credit'] < WC()->cart->get_total('')) return false;

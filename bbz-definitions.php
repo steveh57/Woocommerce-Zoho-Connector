@@ -27,6 +27,17 @@ define ('BBZ_PAYMENT_METHOD_PAYPAL', 'ppcp-gateway');
 define ('BBZ_PAYMENT_METHOD_STRIPE', 'stripe');
 define ('BBZ_PAYMENT_METHOD_ACCOUNT', 'account');
 
+// Payment method names used by Zoho
+define ('BBZ_PROFORMA', 'Pro Forma');
+
+// Zoho invoice template ids
+define ('BBZ_TEMPLATE_PROFORMA', 1504573000001016358);
+
+// Zoho Sales Order substatus codes
+define ('BBZ_SOSUB_WAITSTOCK', 'cs_waiting');
+define ('BBZ_SOSUB_WAITPO', 'cs_waitfor');
+define ('BBZ_SOSUB_WAITPAYMENT', 'cs_70eoqdr');
+
 if (stristr(site_url(), 'test')) { // if running on test site
 	define ('ZOHO_SALESORDER_PREFIX', 'TEST-');
 	define ('BBZ_DEBUG', true);

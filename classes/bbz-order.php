@@ -255,7 +255,7 @@ class bbz_order {
 			$zoho->salesorder_confirm ($this->zoho_order_id);
 			
 			// create an invoice and payment record.
-			$response = $this->create_zoho_invoice ($this->zoho_order);
+			$response = $this->create_zoho_invoice ($this->zoho_order, 'confirm');
 			//bbz_debug ($zoho_invoice, 'Invoice created', false);
 			if (is_wp_error ($response) ) {
 				$response->add ('bbz-ord-007', 'Unable to create Zoho invoice', array(
@@ -287,7 +287,30 @@ class bbz_order {
 		} else {  // order not paid
 			// if user is wholesale customer confirm anyway
 			if (bbz_is_wholesale_customer ($this->user_id)) {
-				$zoho->salesorder_confirm ($this->zoho_order_id);
+				$response = $zoho->salesorder_confirm ($this->zoho_order_id);
+				if (is_wp_error ($response) ) {
+					$response->add ('bbz-ord-010', 'Failed to confirm sales order',
+						array (	'order'=>$this->order->get_order_number())	);
+					return $response;
+				}
+				//if payment terms are proforma, set status to wait for payment and create proforma invoice
+				if ($this->zoho_order['payment_terms_label'] == BBZ_PROFORMA) {
+					$response = $zoho->salesorder_substatus ($this->zoho_order_id, BBZ_SOSUB_WAITPAYMENT);
+					if (is_wp_error ($response) ) {
+					$response->add ('bbz-ord-011', 'Failed to update substatus',
+						array (	'order'=>$this->order->get_order_number())	);
+						return $response;
+					}
+					// create an invoice
+					$response = $this->create_zoho_invoice ($this->zoho_order, 'email', BBZ_TEMPLATE_PROFORMA);
+					//bbz_debug ($zoho_invoice, 'Invoice created', false);
+					if (is_wp_error ($response) ) {
+						$response->add ('bbz-ord-012', 'Failed to create Zoho invoice', array(
+							"Zoho Order"=>$this->zoho_order));
+						return $response;
+					}						
+					
+				}
 			}
 		}
 		
@@ -327,7 +350,7 @@ class bbz_order {
 		$zoho = new zoho_connector;
 		$result = $zoho->create_contact ($contact);
 		if (is_wp_error($result)) {
-			$result->add ('bbz-ord-010', 'bbz_order->create_contact failed', array (
+			$result->add ('bbz-ord-020', 'bbz_order->create_contact failed', array (
 				'user_id'=>$this->user_id
 				) );
 			return $result;
@@ -409,8 +432,20 @@ class bbz_order {
 		return $zoho->create_salesorder ($zoho_order);
 
 	}
-	
-	private function create_zoho_invoice ($zoho_order) {
+	/*****
+	* create_zoho_invoice
+	*
+	* Creates the invoice in zoho
+	*
+	* Parameters:
+	*	$zoho_order	The sales order returned from create_zoho_order
+	*	$template (optional) Specify a particular Zoho template id (numeric code)
+	*	$action	Can be 'confirm' to mark the invoice as sent, or 'email' to send the invoice to the current contact
+	*
+	* TODO: & ampersand in reference field gets rejected by Zoho
+	*
+	******/	
+	private function create_zoho_invoice ($zoho_order, $action='', $template='') {
 		$salesorder_fields_to_copy = array(
 			'customer_id',
 			'shipping_address_id',
@@ -444,6 +479,7 @@ class bbz_order {
 				$zoho_invoice [$field_name] = $zoho_order [$field_name];
 			}
 		}
+		if (!empty ($template) ) $zoho_invoice['template_id'] = $template;
 		$zoho_invoice ['reference_number'] = $zoho_order ['salesorder_number'];
 		foreach ($zoho_order ['line_items'] as $line_no=>$line_item) {
 			foreach ($lineitems_fields_to_copy as $field_name) {
@@ -461,7 +497,7 @@ class bbz_order {
 
 		//bbz_debug ($zoho_invoice, 'Invoice array before sending', false);
 		$zoho = new zoho_connector;
-		$zoho_invoice = $zoho->create_invoice ($zoho_invoice, $confirm=true);
+		$zoho_invoice = $zoho->create_invoice ($zoho_invoice, $action, $this->zoho_cust_id);
 		if (!is_wp_error ($zoho_invoice)) {
 			$this->order->add_meta_data ('zoho_invoice_id', $zoho_invoice['invoice_id']);
 		}
@@ -487,7 +523,7 @@ class bbz_order {
 		} elseif (stristr ($this->order->get_payment_method(), BBZ_PAYMENT_METHOD_STRIPE)) {
 			$zoho_payment ['payment_mode'] = 'Stripe';
 			$zoho_payment ['account_id'] = ZOHO_STRIPE_ACCOUNT_ID;
-		} else return new WP_Error ('bbz-ord-021', 'Unrecognised payment method', array ('order'=>$this->order));
+		} else return new WP_Error ('bbz-ord-030', 'Unrecognised payment method', array ('order'=>$this->order));
 		
 		$zoho_payment ['reference_number'] = $zoho_invoice ['reference_number'];
 

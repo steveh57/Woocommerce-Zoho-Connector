@@ -523,6 +523,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 	}
 	
 	/****
+	* salesorder_substatus
+	*
+	* Change sales order sub-status
+	*****/
+	public function salesorder_substatus ($order_id, $substatus) {
+
+		$request = 'salesorders/'.$order_id.'/substatus/'.$substatus;
+		$response = $this->post_books ($request);
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zcon-027A', 'Zoho salesorder_substatus failed', array(
+				'order_id'=>$order_id,
+				'substatus'=>$substatus));
+		}
+		return $response;
+	}
+	
+	/****
 	* salesorder_addcomment
 	*
 	* Adds a comment in the sales order history
@@ -554,7 +571,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 * Returns the zoho invoice array or wp_error
 ****/	
 
-	public function create_invoice ($invoice, $confirm=false) {
+	public function create_invoice ($invoice, $action='', $contact_id='') {
 
 		$request = 'invoices';
 		if (isset ($invoice['invoice_number'])) $request .= '?ignore_auto_number_generation=true'; 
@@ -570,13 +587,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 		
 		if (isset ($response['invoice']['invoice_id'])) {
 			//now confirm the invoice
-			$confirmed = $this->invoice_confirm ($response['invoice']['invoice_id']);
-			if (is_wp_error ($confirmed) ) {
-				$confirmed->add ('bbz-zcon-030', 'Zoho create_invoice confirm failed', array(
-					'invoice'=>$invoice,
-					'zoho data'=>$response));
-				return $confirmed;
-			}
+			if ($action == 'confirm') {
+				$confirmed = $this->invoice_confirm ($response['invoice']['invoice_id']);
+				if (is_wp_error ($confirmed) ) {
+					$confirmed->add ('bbz-zcon-030', 'Zoho create_invoice confirm failed', array(
+						'invoice'=>$invoice,
+						'zoho data'=>$response));
+					return $confirmed;
+				}
+			} /*elseif ($action == 'email') {
+				$confirmed = $this->invoice_email ($response['invoice']['invoice_id'], $contact_id);
+				if (is_wp_error ($confirmed) ) {
+					$confirmed->add ('bbz-zcon-030', 'Zoho create_invoice confirm failed', array(
+						'invoice'=>$invoice,
+						'zoho data'=>$response));
+					return $confirmed;
+				}
+			} */
 			// success!
 			return $response['invoice'];
 		} else {
@@ -603,6 +630,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 		}
 		return $response;
 	}
+	
+	/****
+	* invoice_email - not working!!
+	*
+	* Email invoice to contact
+	*
+	*****
+
+	public function invoice_email ($invoice_id, $contact_id) {
+
+		if (! $this->isconnected() ) return false;
+		
+		$request = "invoices/$invoice_id/email";
+		$response = $this->post_books ($request);
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zcon-036', 'Zoho invoice_email failed', array(
+				'invoice_id'=>$invoice_id));
+		}
+		return $response;
+	}
+	*/
 	
 	/****
 	* create_payment
