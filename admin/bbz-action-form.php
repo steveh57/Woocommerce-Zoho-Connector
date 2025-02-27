@@ -76,7 +76,7 @@ class bbz_action_form extends bbz_admin_form {
 		switch ($this->options->get('function')) {
 		case 'update-products':
 			$products = new bbz_products;
-			$result = $products->update_all();
+			$result = $products->update_all(true); // update and reload stock data from zoho
 			if (is_wp_error ($result)) {
 				$this->options->set_admin_notice ('Product update failed', 'error');
 			} else {

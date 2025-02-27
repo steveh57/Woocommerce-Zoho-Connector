@@ -106,7 +106,7 @@ function bbz_process_orders ($resubmit=false, $order_ids=array()) {
 add_action ('bbz_hourly_cron', 'bbz_hourly_product_update');
 function bbz_hourly_product_update () {
 	$products = new bbz_products;
-	$result = $products->update_all();
+	$result = $products->update_all(false); // only update stock on daily call
 	if (is_wp_error($result)) {
 		bbz_email_admin ('Hourly product update failed', $result);
 		return;
@@ -142,7 +142,7 @@ function bbz_daily_user_update () {
 
 function bbz_daily_product_update () {
 	$products = new bbz_products;
-	$result = $products->update_all();
+	$result = $products->update_all(true);
 	if (is_wp_error($result)) {
 		bbz_email_admin ('Daily Product Update failed', $result);
 	} else {

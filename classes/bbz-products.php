@@ -49,6 +49,17 @@ class bbz_products {
 			$this->shipping_map [$shipping_class->name] = $shipping_class->term_id;
 		}
 	}
+	
+	private function get_available_stock ($zoho_id) {
+		$zoho = new zoho_connector;
+		$result = $zoho->get_single_item ($zoho_id);
+		if (is_wp_error ($result)) {
+			$result->add ('bbz-prod-01', 'get_single_item failed in bbz_products construct' );
+			return $result;
+		}
+		return $result['item']['warehouses'][0]['warehouse_actual_available_for_sale_stock'];
+	}
+
 	/*******
 	*
 	* Update products from Zoho
@@ -69,10 +80,22 @@ class bbz_products {
 	* - Wholesale visibility
 	* 
 	*******/
-	public function update_all () {
+	public function update_all ($stock_update=false) {
 		 // check for errors getting data from zoho before proceeding.
 		if (is_wp_error ($this->items)) return $this->items; // check no error occurred in construct
-			
+		
+		$available_stock=array();
+		// get available stock data from zoho
+		if ($stock_update !== false) {
+			$zoho = new zoho_connector;
+			$result = $zoho->get_available_stock();
+			if (is_wp_error ($result)) {
+				$result->add ('bbz-prod-40', 'get_available_stock failed in bbz_products' );
+				$warnings ['stock error'] = $result;
+				$stock_update = false; //continue, but don't update stock
+			} else $available_stock = $result;
+		}
+		
 		$update_count = 0;
 		foreach ( $this->product_posts as $post ) {  // for each woo product
 			$product = wc_get_product ($post);
@@ -81,7 +104,7 @@ class bbz_products {
 				foreach ($children as $key => $child_id) 
 				{ 
 					$child = wc_get_product ($child_id);
-					$result = $this->update_single ($child);
+					$result = $this->update_single ($child, $stock_update, $available_stock);
 					if (!empty ($result)) $warnings[$child_id] = $result;
 					$update_count += 1; 
 				}
@@ -94,7 +117,7 @@ class bbz_products {
 				$product->set_catalog_visibility ('visible'); // ensure it's visible
 				update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'all');
 			} else {
-				$result = $this->update_single ($product);
+				$result = $this->update_single ($product, $stock_update, $available_stock);
 				if (!empty ($result)) $warnings[$product->get_id()] = $result;
 				$update_count += 1; 
 			}
@@ -105,17 +128,13 @@ class bbz_products {
 		return $warnings;
 	}
 
-	function update_single ($product) {
+	function update_single ($product, $stock_update=false, $available_stock=0) {
 		
 		$warnings = array();
 		$post_id = $product->get_id();
 		$sku = $product->get_sku();
 		if ( !empty($sku) && isset ($this->items[$sku]) ) {	// have we got zoho data for this sku?
 			$item = $this->items[$sku];
-			$availability = bbz_set_availability ($item);
-			//$availability = empty ($item['availability']) ? 'available' : str_replace(' ', '-', strtolower ($item['availability']));
-			update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
-			update_post_meta ($post_id, BBZ_PM_AVAILABILITY, $availability); //cleaned up version - lowercase with hyphens
 			$restrictions = $item['wholesale_only'] === 'Yes' ? 'wholesale-only' : 'none';
 			update_post_meta ($post_id, BBZ_PM_RESTRICTIONS, $restrictions);
 			if (!empty ($item['release_date'])) {
@@ -194,17 +213,21 @@ class bbz_products {
 					// Set default backorders value - will be overridden dynamically
 					$product->set_backorders (bbz_default_backorders($post_id));
 					
-					// Deal with stock and availability
-					$product->set_manage_stock (true) ;  // Ensure stock management enabled
-					$product->set_stock_quantity ($item['stock']);
-					if ($product->get_low_stock_amount() == 0) {
-						$product->set_low_stock_amount(3);  //set warning level to 3 if not set
+					// Deal with stock and availability if stock update requested or not previously set
+					// Stock value returned by zoho items call doesn't allow for open orders and includes stock in all warehouses
+					// Note this calls zoho for each product so should not be used more than once a day
+					if ($stock_update !== false && isset($available_stock[$sku])) {
+						
+						$item['stock'] = $available_stock[$sku]<0 ? 0 : $available_stock[$sku];
+						$product->set_manage_stock (true) ;  // Ensure stock management enabled
+						$product->set_stock_quantity ($item['stock']);
+						if ($product->get_low_stock_amount() == 0) {
+							$product->set_low_stock_amount(3);  //set warning level to 3 if not set
+						}
+
+						// enable default visibility - can be overridden by visibility filter in bbz-availability module
+						$product->set_catalog_visibility (bbz_default_visibility ($post_id, $available_stock)); 
 					}
-					if ($item['stock'] > 0 && in_array ($availability, ['pre-order', 'coming-soon']) ) {
-						$warnings [] = 'Availability '.$availability.' now in stock';
-					}
-					// enable default visibility - can be overridden by visibility filter in bbz-availability module
-					$product->set_catalog_visibility (bbz_default_visibility ($post_id, $item['stock'])); 
 				}
 			
 			} else {  //product is inactive on zoho (not available)
@@ -216,6 +239,13 @@ class bbz_products {
 				//update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
 
 			} 
+			
+			$availability = bbz_set_availability ($item);
+			update_post_meta ($post_id, BBZ_PM_INACTIVE_REASON, $item['availability']);
+			update_post_meta ($post_id, BBZ_PM_AVAILABILITY, $availability); //cleaned up version - lowercase with hyphens
+			if ($item['stock'] > 0 && in_array ($availability, ['pre-order', 'coming-soon']) ) {
+				$warnings [] = 'Availability '.$availability.' now in stock';
+			}
 
 		} else {  //product is not listed on zoho (not available)
 				$product->set_stock_status ('outofstock');
@@ -258,8 +288,8 @@ class bbz_products {
 			}
 			// if item sku from zoho is not in product list
 			foreach ($this->items as $sku=>$item) {
-				if (!isset ($index[$sku]) && $item['status']=='active'  && $item['availability'] !== 'Special Order') {
-					$results [$sku] = $item['name'];
+				if (!isset ($index[$sku]) && $item['status']=='active'  && $item['stock'] > 0) {
+					$results [$sku] = $item['name'].', stock: '.$item['stock'];
 				}
 			}
 			return $results;

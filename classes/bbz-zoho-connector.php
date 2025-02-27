@@ -721,5 +721,36 @@ if ( ! defined( 'ABSPATH' ) ) {
 		return $this->get_salesorder ('', $filter);
 	}
 	
+/*********
+* get_available_stock
+*
+* Returns the output of the Zoho Analytics query 'BBZ Available Stock' coverted to an associative array of 
+*	'SKU' => 'quantity'
+* Note that the stock quantities only get updated once a day, around midnight and are calculated as
+* 	Accounting stock (i.e. stock invoiced, billed, credited or adjusted, allowing for warehouse transfers)
+*	+ Unbilled stock received
+*	- Orders not yet invoiced
+*
+********/
+
+	public function get_available_stock () {
+	
+		$response = $this->get_analytics ('BBZ Available Stock');
+		if (is_wp_error ($response)) {
+			$response->add('bbz-zcon-040', 'Zoho get_available_stock failed');
+			return $response;
+		} elseif ( is_array ($response) && is_array ($response['data'])) {
+			$stock = array();
+			foreach ($response['data'] as $row) {
+				$stock[$row['SKU']] = $row['Qty'];
+			}
+			return $stock;
+		} else {
+			return new WP_Error ('bbz-zcon-011', 'Zoho get_sales_history failed', array(
+				'response'=>$response));
+		}
+	}
+	
+	
 } //class
 ?>
