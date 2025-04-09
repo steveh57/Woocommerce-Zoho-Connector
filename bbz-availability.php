@@ -59,8 +59,9 @@ function bbz_default_visibility ($product_id, $stock) {
 * based on the text from the Availability field in Zoho Item
 * - A sanitised version is created (lowercase, spaces replaced by hyphen)
 * - blank fields are set to 'available' (or 'not-available' if item is inactive)
-* - in stock items (apart from special order) are set to 'available'
+* - in stock items are set to 'available'
 * - out of stock items with code 'available' are set to 'outofstock'
+* Called from bbz_products update_single
 *****/
 
 function bbz_set_availability ($item) {
@@ -71,7 +72,9 @@ function bbz_set_availability ($item) {
 	}
 	if ($availability === 'available' && $item['stock'] <= 0) {
 		$availability = 'outofstock';
-	} elseif ($availability !== 'special-order' && $item['stock'] > 0 ) $availability = 'available';
+	} elseif (/*$availability !== 'special-order' && */ $item['stock'] > 0 ) $availability = 'available';
+	// previously special order items were not treated as available.  Now if we have available stock, even for 
+	// special order items, we mark the item as available.
 	return $availability;
 }
 
@@ -369,7 +372,7 @@ add_filter( 'woocommerce_product_add_to_cart_text', 'bbz_add_to_cart_button_text
 
 function bbz_add_to_cart_button_text ( $add_to_cart_text, $product, $user_id='' ) {
 	$availability = bbz_get_availability ($product, $user_id);
-	if ($availability['purchasable'])
+	//if ($availability['purchasable'])
 		
 	switch ($availability['code']) {
 		case 'pre-order': 
@@ -378,8 +381,9 @@ function bbz_add_to_cart_button_text ( $add_to_cart_text, $product, $user_id='' 
 			$add_to_cart_text = 'Backorder'; break;
 		case 'special-order':
 			$add_to_cart_text = 'Special order'; break;
+		case 'not-available':
+			$add_to_cart_text = empty($availability['reason']) ? 'Not Available' : $availability['reason']; break;
 		//case 'restricted':
-		//case 'not-available':
 	}
     return $add_to_cart_text; 
 }

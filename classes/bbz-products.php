@@ -213,9 +213,9 @@ class bbz_products {
 					// Set default backorders value - will be overridden dynamically
 					$product->set_backorders (bbz_default_backorders($post_id));
 					
-					// Deal with stock and availability if stock update requested or not previously set
+					// Deal with stock if stock update requested
 					// Stock value returned by zoho items call doesn't allow for open orders and includes stock in all warehouses
-					// Note this calls zoho for each product so should not be used more than once a day
+					// This uses stock from a zoho analytics report - should only be done daily as report is updated overnight
 					if ($stock_update !== false && isset($available_stock[$sku])) {
 						
 						$item['stock'] = $available_stock[$sku]<0 ? 0 : $available_stock[$sku];
@@ -235,6 +235,11 @@ class bbz_products {
 				$product->set_stock_quantity (0);
 				$product->set_backorders ('no');
 				$product->set_catalog_visibility ('search');  //only visible in searches
+				// Make sure sale price is not showing on inactive products
+				$price = empty ($item['orp']) ? $item['rrp'] : $item['orp'];
+				$product->set_price ($price);  //set active price
+				$product->set_regular_price ($price);
+				$product->set_sale_price ('');  //make sure sale price is cleared
 				
 				//update_post_meta ($post_id, 'wwpp_product_wholesale_visibility_filter', 'wholesale_customer');
 
